@@ -1,0 +1,82 @@
+# アプリ／GAS 台帳
+#
+# 棚卸し日: 2026-09-10
+# 重大な所見: GAS のソースコードは Drive 上にしか存在せず、Git 管理外。
+#             誤削除・誤編集からの復旧手段が現状ない。clasp でのソース同期が必要。
+
+apps:
+  - key: chohyo_app
+    name: 帳票アプリ
+    type: gas
+    id: 1KMAAiIH13i2Hiq8Kuz8O_liIlmSeBjXgvvg2UhYSGVhPYmvkyP0IqehP
+    location: マイドライブ直下   # 要移設
+    role: 見積書・注文書・検収書・納品書・請書・但書のPDF生成
+    data_sources: [chohyo_app_data, mse_mitsumori_template_v4]
+    output: Drive「MSE帳票」フォルダ配下（1S8GlSAj2FCHPOrke0ibdre2pz24P-vP2）に 会社名_YYYYMMDD で出力
+    last_modified: 2026-09-06
+    status: active
+    source_backed_up: false
+
+  - key: sales_report
+    name: セールス報告
+    type: gas
+    id: 1lpIoY59ECGV5Lkt0UzAIS2LZkjKdJ4RwfRqOWrYGImCm85Bq-aGd6ppy
+    location: マイドライブ直下   # 要移設
+    role: 要調査（用途未記録）
+    data_sources: []
+    last_modified: 2026-09-10
+    status: unknown
+    source_backed_up: false
+
+  - key: gyoseki_bunseki_mse
+    name: 業績分析　MSE
+    type: gas
+    id: 1Qo-OD4EDPuXJDUXcWuE4pOAtoXr3J9WbzSpLSJXZZu_8bpjzhRC4vWTK
+    location: マイドライブ直下   # 要移設
+    role: 要調査（用途未記録）
+    last_modified: 2026-04-22
+    status: unknown
+    source_backed_up: false
+
+  - key: cxo
+    name: CxO
+    type: gas
+    id: 1j2vtr_YoRgBb_CcHOAG1NrFn_aWxzgU0zLyeQVvBpBEq0R_2Af81ohiD
+    location: マイドライブ直下   # 要移設
+    role: 要調査（用途未記録）
+    last_modified: 2026-05-26
+    status: unknown
+    source_backed_up: false
+
+  # 名前がついていない = 用途が誰にも分からない。中身を見て命名するか削除するかの判断が必要。
+  - key: untitled_gas_1
+    name: 無題のプロジェクト
+    type: gas
+    id: 1zYdN2L4vL7hjz4mSb2aEL0qdbgCo03R47eRVGCDtT_nQks5dCUB1HG9k
+    last_modified: 2026-09-04
+    status: unknown
+    action_required: 命名 または 削除
+
+  - key: untitled_gas_2
+    name: 無題のプロジェクト
+    type: gas
+    id: 1DyhOxdq3E2ifriasZk1iNRdcsbcT1kujYNL45TzpBAeU_fcaMBzgv6RY
+    last_modified: 2026-09-04
+    status: unknown
+    action_required: 命名 または 削除
+
+  - key: untitled_gas_3
+    name: 無題のプロジェクト
+    type: gas
+    id: 15CoiQFI9HHxK5WZJv6ejMrPAK1hmBI0C37UiKsYvPFlGXOnHjyrmwdIb
+    last_modified: 2026-04-21
+    status: unknown
+    action_required: 命名 または 削除
+
+  - key: chorei_board
+    name: MSE朝礼ボード
+    type: spreadsheet_app
+    data_sources: [chorei_board_data]
+    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース
+    status: active
+    source_backed_up: false

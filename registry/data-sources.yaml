@@ -1,0 +1,200 @@
+# データソース台帳（単一情報源）
+#
+# AIオフィスで参照するすべてのデータの「正」の所在。
+# スキル・GAS・手作業のいずれからでも、参照先はファイル名ではなく必ずこの id を経由すること。
+#
+# status:  active   … 現役。参照してよい
+#          stale    … 一定期間更新なし。参照前に鮮度確認が必要
+#          unknown  … 台帳未整備。要調査
+#          retired  … 廃止。参照禁止
+#
+# 棚卸し日: 2026-09-10
+
+sources:
+
+  # ---------- KGI・業績 ----------
+  - key: checksheet_mse_2026
+    name: 【全体】チェックシート2026 MSE
+    type: spreadsheet
+    id: 1eu3Ke_yTi1b-Kh6x7MM1SuMb23DXaK7UKe2O7I5WXiA
+    location: 共有ドライブ
+    owner: 共有（MSEチーム）
+    role: MSEのKGI（計上売上・計上粗利・受注売上）月別実績とD案件スナップショットの正
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: [analyze-pipeline-mse, track-d-case-mse]
+    notes: track-d-case-mse は ID ではなく名前で参照している。要修正。
+
+  - key: gyoseki_report
+    name: 業績レポート
+    type: spreadsheet
+    id: 1gvB6sOKG8CRIobKoDAXOXbFDKejXx6a1MQmOpxc7YrE
+    location: 共有ドライブ
+    owner: 共有
+    role: 週次業績レポート（rep_MSE タブ）
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: [check-report-mse, mse-weekly-kpi-recovery]
+
+  - key: mse_gyoseki_kanri_2026
+    name: mse_業績管理_2026
+    type: spreadsheet
+    id: 175o4Ll0HFjaqgWNLzh2YiiADg3W9hOhFFT7obeWrGtQ
+    location: 共有
+    owner: tamura@makeshop.co.jp
+    role: 業績管理
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: [mse-weekly-kpi-recovery, mse-shodan-gas]
+    notes: 他部署メンバー所有。所有者はAIワークフローの入力になっていることを認識していない可能性あり。
+
+  - key: mse_shodan_bunseki_2026
+    name: mse_商談分析_2026
+    type: spreadsheet
+    id: 1L2FXZQOgakMIe4VFkg0qei8KdrfntfvhexzWoBoTXp8
+    location: 共有
+    owner: tamura@makeshop.co.jp
+    role: 商談分析。GAS が紐づく
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: [mse-shodan-gas, mse-weekly-kpi-recovery]
+
+  - key: ms_action_plan
+    name: ms事業部_アクションプラン
+    type: spreadsheet
+    id: 1O5KC7BuZeD4pChvJbEDuAiCA5L6PoYFzWj8WYJiHI98
+    location: 共有
+    owner: suetsugu.atsushi@makeshop.co.jp
+    role: ms事業部のアクションプラン。MSE施策との突合先
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: [analyze-pipeline-mse, mse-weekly-kpi-recovery]
+
+  # ---------- 個人チェックシート ----------
+  # check-sf-sheet-consistency / -admin / -self の3スキルが同じ表を複製している。
+  # 本台帳を唯一の正とし、3スキルからは参照に切り替えること。
+  - key: personal_checksheet_hirose
+    name: 【広瀬】個人チェックシート2026
+    type: spreadsheet
+    id: 18Y16vZ6O6h32GKkdPJMWnTHVrhg4kn07mz0VpwCcL0w
+    owner: hirose@makeshop.co.jp
+    role: 個人の案件・数字管理。Salesforce との突合対象
+    status: unknown
+    last_modified: 未確認
+    consumed_by: [check-sf-sheet-consistency, check-sf-sheet-consistency-admin, check-sf-sheet-consistency-self]
+
+  - key: personal_checksheet_yoshimuta
+    name: 【吉牟田】個人チェックシート2026
+    type: spreadsheet
+    id: 1cvI4Y_g1NnirXuho0e0RDBT4RypbOYAb5Gc0E9jfI54
+    owner: 吉牟田
+    role: 同上
+    status: unknown
+    last_modified: 未確認
+    consumed_by: [check-sf-sheet-consistency, check-sf-sheet-consistency-admin, check-sf-sheet-consistency-self]
+
+  - key: personal_checksheet_uematsu
+    name: 【植松】個人チェックシート2026
+    type: spreadsheet
+    id: 1vcTZtjv7n2Wzo2aA3_F83qbx0ZT9QpTLod6ER5goWwc
+    owner: 植松
+    role: 同上
+    status: unknown
+    last_modified: 未確認
+    consumed_by: [check-sf-sheet-consistency, check-sf-sheet-consistency-admin, check-sf-sheet-consistency-self]
+
+  - key: personal_checksheet_kosuge
+    name: 【小菅】個人チェックシート2026
+    type: spreadsheet
+    id: 1lGQ9bl7zt0WgwaLyXxifVyFo0dWLGKrCx0yjRsCRn4g
+    owner: 小菅
+    role: 同上
+    status: unknown
+    last_modified: 未確認
+    consumed_by: [check-sf-sheet-consistency, check-sf-sheet-consistency-admin, check-sf-sheet-consistency-self]
+
+  - key: personal_checksheet_inoue
+    name: 【井上】個人チェックシート2026
+    type: spreadsheet
+    id: 1VeVhP1wAc2bdyMyHey-OQExtMtE8nQG8O4jX8kq7dIg
+    owner: inoue.kosuke@makeshop.co.jp
+    role: 同上
+    last_modified: 2026-06-09
+    status: stale        # 3ヶ月更新なし。突合の入力として妥当か要確認
+    consumed_by: [check-sf-sheet-consistency, check-sf-sheet-consistency-admin, check-sf-sheet-consistency-self]
+
+  # ---------- 自作アプリのデータ層 ----------
+  - key: eigyo_kodo_keikaku_db
+    name: 営業行動計画DB
+    type: spreadsheet
+    id: 14v091WBNgDp1en-BRGfwINRp6boSBSM3AUdMYzGJmDk
+    location: マイドライブ直下  # 要移設
+    owner: inoue.kosuke@makeshop.co.jp
+    role: 営業行動計画のデータ層
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: []      # 参照元スキル未登録。要調査
+
+  - key: chorei_board_data
+    name: MSE朝礼ボード_データ
+    type: spreadsheet
+    id: 18FYRRykL5krlrZe3Sq4hJtl7ZIAUsoX4AxS9RX6QyOU
+    location: マイドライブ直下  # 要移設
+    owner: inoue.kosuke@makeshop.co.jp
+    role: 朝礼ボードのデータ層
+    last_modified: 2026-09-10
+    status: active
+    consumed_by: []
+    related: [MSE朝礼ボード_ソース（フォルダ 1hVnWNMttCtTdvkplcconwtcENYcgI-MS）]
+
+  - key: chohyo_app_data
+    name: MSE帳票アプリ
+    type: spreadsheet
+    id: 1VzbI5VbE8MlMBE-HHssF_3Vj1hNnLWJJh7eo5wVkt68
+    location: マイドライブ直下  # 要移設
+    owner: inoue.kosuke@makeshop.co.jp
+    role: "帳票アプリ（GAS: 帳票アプリ）のデータ層"
+    last_modified: 2026-09-09
+    status: active
+    consumed_by: ["gas:chohyo_app"]
+
+  # ---------- テンプレート ----------
+  - key: mse_mitsumori_template_v4
+    name: 【テンプレ】【雛形】【直販】MSE見積書_ver4.0
+    type: spreadsheet
+    id: 1m56YJZnRVIlX049gRgB7PTP_kdD8TnzjkVS0ngX-pgc
+    location: マイドライブ直下  # 要移設
+    owner: inoue.kosuke@makeshop.co.jp
+    role: 直販見積書の雛形。帳票アプリの出力元
+    last_modified: 2026-09-06
+    status: active
+    notes: 同名の .xlsm 版（1_fMpoeHisTHpth8PCkExFR_YgShEVpJw）が併存。どちらが正か要決定。
+
+  # ---------- Salesforce（Drive外） ----------
+  - key: sf_report_keijo
+    name: MSE_26MM計上予定 / MSE_26通期計上予定
+    type: salesforce_report
+    id: null              # レポート名で参照している。レポートIDに置き換えるべき
+    owner: Salesforce
+    role: 計上予定の案件レポート
+    status: unknown
+    consumed_by: [alert-overdue-mse, analyze-pipeline-mse]
+    notes: MM は月の可変部。名前ベース参照のため、レポート名変更で静かに壊れる。
+
+  - key: sf_report_juchu
+    name: MSE_26MM受注予定実績
+    type: salesforce_report
+    id: null
+    owner: Salesforce
+    role: 受注予定・実績の案件レポート
+    status: unknown
+    consumed_by: [alert-overdue-mse]
+
+  - key: sf_todo_listview
+    name: ToDoリストビュー（filterName=MSE）
+    type: salesforce_listview
+    id: filterName=MSE
+    owner: Salesforce
+    role: 次回TODOの期日管理
+    status: active
+    consumed_by: [alert-overdue-mse]

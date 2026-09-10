@@ -1,0 +1,158 @@
+# スキル台帳
+#
+# 棚卸し日: 2026-09-10 / 全28スキル
+# ref_style: id   … Drive ID で参照している（安定）
+#            name … ファイル名の文字列で参照している（リネームで静かに壊れる）
+#            none … 外部データを読まない
+#
+# 重大な所見: 28スキルのソースは ~/.claude/skills/synced/ にしか存在せず Git 管理外。
+
+skills:
+
+  # ===== MSE業務（データ参照あり）=====
+  - name: analyze-pipeline-mse
+    role: パイプライン・業績数字の増減分析と対策提案
+    reads: [checksheet_mse_2026, ms_action_plan, sf_report_keijo]
+    ref_style: id
+    risk: low
+
+  - name: check-report-mse
+    role: 週次業績レポート（rep_MSE）のCOO視点フィードバック
+    reads: [gyoseki_report]
+    ref_style: id
+    risk: low
+
+  - name: check-sf-sheet-consistency
+    role: 個人チェックシートとSalesforceの突合（チャンネル投稿）
+    reads: [personal_checksheet_hirose, personal_checksheet_yoshimuta, personal_checksheet_uematsu, personal_checksheet_kosuge, personal_checksheet_inoue]
+    ref_style: id
+    risk: medium
+    issue: データソース表を -admin / -self と3重複コピーしている。台帳参照に一本化すべき。
+
+  - name: check-sf-sheet-consistency-admin
+    role: 同上（管理者DMに全員分）
+    reads: [personal_checksheet_hirose, personal_checksheet_yoshimuta, personal_checksheet_uematsu, personal_checksheet_kosuge, personal_checksheet_inoue]
+    ref_style: id
+    risk: medium
+    issue: 上と同じ表の複製
+
+  - name: check-sf-sheet-consistency-self
+    role: 同上（実行者本人の差異のみDM）
+    reads: [personal_checksheet_hirose, personal_checksheet_yoshimuta, personal_checksheet_uematsu, personal_checksheet_kosuge, personal_checksheet_inoue]
+    ref_style: id
+    risk: medium
+    issue: 上と同じ表の複製
+
+  - name: track-d-case-mse
+    role: D案件スナップショットタブの推移集計
+    reads: [checksheet_mse_2026]
+    ref_style: name
+    risk: HIGH
+    issue: 「【全体】チェックシート2026 MSE」を名前で参照。IDに置換が必要。
+
+  - name: mse-weekly-kpi-recovery
+    role: 当週KPI未達時の回収目標設定と対策文生成
+    reads: [gyoseki_report, mse_gyoseki_kanri_2026, mse_shodan_bunseki_2026, ms_action_plan]
+    ref_style: name
+    risk: HIGH
+    issue: 参照先をすべて名前で記述。IDに置換が必要。
+
+  - name: mse-shodan-gas
+    role: mse_商談分析_2026 のGAS改修手順・不変条件
+    reads: [mse_shodan_bunseki_2026, mse_gyoseki_kanri_2026]
+    ref_style: name
+    risk: HIGH
+    issue: 同上
+
+  - name: alert-overdue-mse
+    role: 受注予定日・検収予定日・次回TODOの期日超過アラート
+    reads: [sf_report_keijo, sf_report_juchu, sf_todo_listview]
+    ref_style: name
+    risk: HIGH
+    issue: SalesforceレポートをレポートIDでなく名前で参照。
+
+  # ===== 業務支援（外部データ参照なし／軽微）=====
+  - name: shodan-check
+    role: 商談議事録を12ステップで診断
+    reads: []
+    ref_style: none
+  - name: morning
+    role: 朝のブリーフをHTMLアーティファクトで出力
+    reads: []
+    ref_style: none
+    notes: カレンダー・メールをMCP経由で参照
+  - name: calendar-add-v3
+    role: Googleカレンダー登録（現行版）
+    reads: []
+    ref_style: none
+  - name: calendar-add-v2
+    role: Googleカレンダー登録（旧版）
+    reads: []
+    ref_style: none
+    status: superseded_by_v3      # v3と併存。廃止判断が必要
+  - name: calendar-retitle
+    role: 既存予定のタイトル一括リネーム
+    reads: []
+    ref_style: none
+  - name: shop-analytics
+    role: makeshop店舗の注文・会員・商品分析
+    reads: []
+    ref_style: none
+    notes: MS MCP から取得
+  - name: makeshop-btob-content
+    role: makeshop BtoB のリード獲得記事執筆
+    reads: []
+    ref_style: none
+
+  # ===== デザイン・規約 =====
+  - name: makeshop-design-system
+    role: makeshopデザインシステム
+    reads: []
+    ref_style: none
+  - name: makeshop-design-guidelines
+    role: makeshopデザインガイドライン
+    reads: []
+    ref_style: none
+    issue: makeshop-design-system と役割が重複。統合検討。
+  - name: mse-design
+    role: MSE向けデザイントーン（上記2つを拡張）
+    reads: []
+    ref_style: none
+  - name: gas-best-practices
+    role: GAS開発のベストプラクティス
+    reads: []
+    ref_style: none
+  - name: safe-destructive-ops
+    role: 破壊的操作の前の退避手順
+    reads: []
+    ref_style: none
+  - name: chrome-tab-management
+    role: Chromeタブ管理
+    reads: []
+    ref_style: none
+
+  # ===== 汎用ツール（Anthropic提供）=====
+  - name: xlsx
+    role: スプレッドシートファイル操作
+    ref_style: none
+    vendor: anthropic
+  - name: pptx
+    role: PowerPoint操作
+    ref_style: none
+    vendor: anthropic
+  - name: docx
+    role: Word操作
+    ref_style: none
+    vendor: anthropic
+  - name: pdf
+    role: PDF操作
+    ref_style: none
+    vendor: anthropic
+  - name: skill-creator
+    role: スキルの作成・改善・評価
+    ref_style: none
+    vendor: anthropic
+  - name: import-memory
+    role: 他AIのメモリエクスポート取り込み
+    ref_style: none
+    vendor: anthropic
