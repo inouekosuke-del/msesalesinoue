@@ -73,6 +73,17 @@ apps:
     status: unknown
     action_required: 命名 または 削除
 
+  - key: shodan_bunseki_gas
+    name: mse_商談分析_2026 付随GAS
+    type: gas
+    id: 1XXk_FClsvJgJs0gRQCX50h82sLf7HNORTD2thrC_XdQxnb3BOdvR_g5p
+    owner: tamura@makeshop.co.jp
+    role: 商談分析スプレッドシートの集計・整形
+    data_sources: [mse_shodan_bunseki_2026]
+    status: active
+    source_backed_up: false
+    notes: mse-shodan-gas スキルが改修手順と不変条件を保持している。他者所有のため改修は要調整。
+
   - key: chorei_board
     name: MSE朝礼ボード
     type: spreadsheet_app

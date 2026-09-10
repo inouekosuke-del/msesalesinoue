@@ -35,6 +35,8 @@ sources:
     last_modified: 2026-09-10
     status: active
     consumed_by: [check-report-mse, mse-weekly-kpi-recovery]
+    notes: mse-weekly-kpi-recovery はこのIDを保持しておらず、ユーザーがURLを渡す運用。
+      同スキルに本台帳の gyoseki_report を参照させれば解消する。
 
   - key: mse_gyoseki_kanri_2026
     name: mse_業績管理_2026
@@ -171,24 +173,47 @@ sources:
     notes: 同名の .xlsm 版（1_fMpoeHisTHpth8PCkExFR_YgShEVpJw）が併存。どちらが正か要決定。
 
   # ---------- Salesforce（Drive外） ----------
+  # Salesforce レポートは月ごとに別レポート。IDは alert-overdue-mse が月別表で保持しており、
+  # 本台帳はその所在を指し示す。ID表そのものの正は当該スキルの references/data-sources.md。
   - key: sf_report_keijo
-    name: MSE_26MM計上予定 / MSE_26通期計上予定
+    name: MSE_26MM計上予定（検収日基準・明細）
     type: salesforce_report
-    id: null              # レポート名で参照している。レポートIDに置き換えるべき
+    id_table: skills/alert-overdue-mse/references/data-sources.md
+    ids_by_month:
+      2026-05: 00OTL00000JGbdN2AT
+      2026-06: 00OTL00000JOPdR2AX
+      2026-07: 00OTL00000JZwcT2AT
+      2026-08: 00OTL00000JZx2H2AT
+      2026-09: 00OTL00000JZxTh2AL
+      2026-10: 00OTL00000JZxbl2AD
+      2026-11: 00OTL00000JZw6E2AT
+      2026-12: 00OTL00000JZxrt2AD
+    url_pattern: https://asfe.lightning.force.com/lightning/r/Report/<ID>/view?queryScope=userFolders
     owner: Salesforce
     role: 計上予定の案件レポート
-    status: unknown
+    status: active
     consumed_by: [alert-overdue-mse, analyze-pipeline-mse]
-    notes: MM は月の可変部。名前ベース参照のため、レポート名変更で静かに壊れる。
+    action_required: 2027-01〜04（同FY26）のレポートID未提供。2026年内に追加が必要。
 
   - key: sf_report_juchu
-    name: MSE_26MM受注予定実績
+    name: MSE_26MM受注予定実績（受注日基準・明細）
     type: salesforce_report
-    id: null
+    id_table: skills/alert-overdue-mse/references/data-sources.md
+    ids_by_month:
+      2026-05: 00OTL00000Ja9cv2AB
+      2026-06: 00OTL00000Ja7pd2AB
+      2026-07: 00OTL00000Ja7Cw2AJ
+      2026-08: 00OTL00000Ja8P72AJ
+      2026-09: 00OTL00000Ja9uf2AB
+      2026-10: 00OTL00000JaA4L2AV
+      2026-11: 00OTL00000JaA9B2AV
+      2026-12: 00OTL00000JaAab2AF
     owner: Salesforce
     role: 受注予定・実績の案件レポート
-    status: unknown
+    status: active
     consumed_by: [alert-overdue-mse]
+    notes: 「2026MM 受注見込＋実績」はマトリックス形式のため使用不可。必ず「予定実績」版を使う。
+    action_required: 2027-01〜04（同FY26）のレポートID未提供。
 
   - key: sf_todo_listview
     name: ToDoリストビュー（filterName=MSE）
