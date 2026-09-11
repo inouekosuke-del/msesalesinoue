@@ -24,6 +24,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`registry/skills.yaml`](registry/skills.yaml) | スキル台帳（28件）。各スキルが何を読むか、参照方式が安全か |
 | [`registry/apps.yaml`](registry/apps.yaml) | アプリ／GAS台帳（9件） |
 | [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) | GASソースをGit管理下に置く手順（ローカル実行） |
+| [`docs/mse-shodan-kijun-fix.md`](docs/mse-shodan-kijun-fix.md) | mse商談分析で数字が合わない原因と、基準を列別に固定する改修仕様 |
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
