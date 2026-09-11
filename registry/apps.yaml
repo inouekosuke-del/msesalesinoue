@@ -96,3 +96,4 @@ apps:
     status: active
     source_backed_up: false
     known_issues: docs/chorei-board-audit-2026-09-11.md   # 集計不具合8件＋UI2件。2026-09-11調査
+    repair_tool: apps/chorei-board-fix/                  # 診断・修復スクリプト（本体には触らない追加ファイル）

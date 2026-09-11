@@ -46,7 +46,8 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 0. **朝礼ボードの集計が実態と合っていない** — 案件テーブルにパイプラインの2割しか入っておらず、
    担当者マスタ未登録の3名（吉牟田・小菅・重松）の数字が全部落ちている。
    調査結果と修正順 → [`docs/chorei-board-audit-2026-09-11.md`](docs/chorei-board-audit-2026-09-11.md)。
-   コードを直すには朝礼ボードのGASソースが要る（同ドキュメント末尾の手順、5分）
+   データ側は [`apps/chorei-board-fix/`](apps/chorei-board-fix/) を貼れば直せる（診断→修復、バックアップ付き）。
+   取り込み元のSFレポートとUI2件は、朝礼ボードのGASソースが無いと直せない（同ドキュメント末尾の手順、5分）
 1. **GASソースの Git 取り込み** — 現状バックアップ皆無で、消えたら復旧不能。
    Drive API では取得できずリモートから実行できないため、
    [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) をローカルで実行する（10〜15分）。

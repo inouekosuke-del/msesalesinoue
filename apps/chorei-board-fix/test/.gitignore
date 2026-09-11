@@ -1,0 +1,4 @@
+# 案件データ（会社名・金額）はGitに入れない
+sheets/
+ChoreiFix.js
+ChoreiAgg.js
