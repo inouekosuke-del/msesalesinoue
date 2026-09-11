@@ -143,11 +143,15 @@ sources:
     id: 18FYRRykL5krlrZe3Sq4hJtl7ZIAUsoX4AxS9RX6QyOU
     location: マイドライブ直下  # 要移設
     owner: inoue.kosuke@makeshop.co.jp
-    role: 朝礼ボードのデータ層
+    role: 朝礼ボードのデータ層（22シート）
     last_modified: 2026-09-10
     status: active
-    consumed_by: []
-    related: [MSE朝礼ボード_ソース（フォルダ 1hVnWNMttCtTdvkplcconwtcENYcgI-MS）]
+    consumed_by: ["gas:chorei_board"]
+    related: [MSE朝礼ボード_ソース（フォルダ 1hVnWNMttCtTdvkplcconwtcENYcgI-MS。空）]
+    notes: |
+      Salesforceから案件・TODOを取り込むが、取り込み元レポートのIDが未登録。
+      案件側とTODO側で参照レポートが食い違っている疑いあり（案件63件 vs TODO 304件）。
+      詳細 → docs/chorei-board-audit-2026-09-11.md
 
   - key: chohyo_app_data
     name: MSE帳票アプリ

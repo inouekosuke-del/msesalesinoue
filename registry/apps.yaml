@@ -87,7 +87,12 @@ apps:
   - key: chorei_board
     name: MSE朝礼ボード
     type: spreadsheet_app
+    id: unknown            # コンテナバインド型のためDriveに単独ファイルとして現れない。
+                           # スプレッドシートの 拡張機能 > Apps Script > プロジェクトの設定 で取得すること
+    bound_to: chorei_board_data
     data_sources: [chorei_board_data]
-    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース
+    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース（作成済みだが中身は空）
+    role: 朝礼・終礼の日次投稿、個人別の受注／計上見込み、指示出し、Slack通知
     status: active
     source_backed_up: false
+    known_issues: docs/chorei-board-audit-2026-09-11.md   # 集計不具合8件＋UI2件。2026-09-11調査
