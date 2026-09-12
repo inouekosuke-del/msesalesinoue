@@ -351,10 +351,13 @@ function logPlan_(plan, isDryRun) {
  * id の候補は既存の命名（個人チェックシートのキー）に合わせた辞書から引く。
  */
 function メンバー追加候補() {
-  var ID_HINT = {
-    '吉牟田': 'yoshimuta', '吉牟田淳嗣': 'yoshimuta',
-    '小菅': 'kosuge', '小菅遥平': 'kosuge',
-    '重松': 'shigematsu', '重松篤弘': 'shigematsu'
+  // 既知の担当は id / 氏名 / SlackID まで埋めて出す。
+  // 出典: alert-overdue-mse の references/data-sources.md（メンバー↔Slackメンション表）と
+  //       check-sf-sheet-consistency が対象にしている営業5名。
+  var KNOWN = {
+    '吉牟田': { id: 'yoshimuta', name: '吉牟田', sfName: '吉牟田 淳嗣', slackId: 'U02693MDCQN', team: 'mse' },
+    '小菅':   { id: 'kosuge',    name: '小菅',   sfName: '小菅 遥平',   slackId: 'U0A6KNQK7JP', team: 'mse' },
+    '重松':   { id: 'shigematsu', name: '重松',  sfName: '重松 篤弘',   slackId: '',            team: 'mse' }
   };
   var plan = buildRepairPlan_();
   var names = {};
@@ -375,12 +378,13 @@ function メンバー追加候補() {
     if (!cur || normName_(nm).length > normName_(cur).length) byPerson[short] = nm;
   });
   Object.keys(byPerson).forEach(function (short) {
-    var full = byPerson[short];
-    out.push([ID_HINT[normName_(full)] || ID_HINT[short] || '(要決定)', short, full,
-              '', '', 'member', 'TRUE', 'FALSE', 0, 0, '', 'mse']);
+    var k = KNOWN[short] || { id: '(要決定)', name: short, sfName: byPerson[short], slackId: '', team: 'mse' };
+    out.push([k.id, k.name, k.sfName, '', k.slackId,
+              'member', 'TRUE', k.slackId ? 'TRUE' : 'FALSE', 0, 0, '', k.team]);
   });
   Logger.log('members シートに以下を追加してから 修復_実行() を再実行すること:');
   out.forEach(function (r) { Logger.log('  ' + r.join('\t')); });
+  Logger.log('※ email は各自のアドレスを入れること（自動では埋まらない）。');
   Logger.log('※ 退職・異動済みなら active を FALSE にする。過去分の名寄せは active に関係なく効く。');
   return out;
 }
