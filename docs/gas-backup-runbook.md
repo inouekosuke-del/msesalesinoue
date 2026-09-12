@@ -31,13 +31,16 @@ https://script.google.com/home/usersettings → 「Google Apps Script API」を�
 ```bash
 git clone https://github.com/inouekosuke-del/msesalesinoue.git
 cd msesalesinoue
-git checkout claude/ai-office-data-organization-vdtwb0
+git checkout claude/lucid-edison-kexbgj
 ```
 
 ### 3. 各プロジェクトを clone する
 
-`registry/apps.yaml` の `id` をそのまま使う。**自分が所有していないものは対象外**
-（`shodan_bunseki_gas` は田村さん所有のため、必要なら本人に依頼）。
+`registry/apps.yaml` の `id` をそのまま使う。
+
+`shodan_bunseki_gas`（mse_商談分析_2026 付随GAS）は田村さん所有だが、
+**井上さんは朝バッチの実行アカウント＝編集権限を持っている**ため clone は通るはず。
+権限エラーが出たときだけ田村さんに依頼する。
 
 ```bash
 mkdir -p apps && cd apps
@@ -51,7 +54,13 @@ clasp clone 1j2vtr_YoRgBb_CcHOAG1NrFn_aWxzgU0zLyeQVvBpBEq0R_2Af81ohiD --rootDir 
 clasp clone 1zYdN2L4vL7hjz4mSb2aEL0qdbgCo03R47eRVGCDtT_nQks5dCUB1HG9k --rootDir ./untitled-1
 clasp clone 1DyhOxdq3E2ifriasZk1iNRdcsbcT1kujYNL45TzpBAeU_fcaMBzgv6RY --rootDir ./untitled-2
 clasp clone 15CoiQFI9HHxK5WZJv6ejMrPAK1hmBI0C37UiKsYvPFlGXOnHjyrmwdIb --rootDir ./untitled-3
+
+# 田村さん所有だが編集権限があるので通るはず。最優先（改修待ちのため）
+clasp clone 1XXk_FClsvJgJs0gRQCX50h82sLf7HNORTD2thrC_XdQxnb3BOdvR_g5p --rootDir ./mse-shodan-bunseki
 ```
+
+> これ1件だけ先に取り込みたい場合は
+> [`mse-shodan-kijun-fix.md` の「手順0」](mse-shodan-kijun-fix.md#手順0先に1回だけ井上さんのローカルpcソースをgitに入れる) を参照。
 
 ### 4. 認証情報が混入していないか確認してからコミット
 
@@ -68,7 +77,7 @@ grep -rniE "(password|secret|api[_-]?key|token|Bearer )" apps/ | grep -v node_mo
 ```bash
 git add apps/
 git commit -m "GASプロジェクトのソースをGit管理下に取り込み"
-git push -u origin claude/ai-office-data-organization-vdtwb0
+git push -u origin claude/lucid-edison-kexbgj
 ```
 
 ### 5. 取り込み後

@@ -78,6 +78,10 @@ apps:
     type: gas
     id: 1XXk_FClsvJgJs0gRQCX50h82sLf7HNORTD2thrC_XdQxnb3BOdvR_g5p
     owner: tamura@makeshop.co.jp
+    # 2026-09-12: 集計の基準（D2）が受注系・検収系の全列に一律適用され、
+    # 月を指定すると「受注売上」「検収売上」のどちらかが必ず列名と食い違う。
+    # 改修仕様 → docs/mse-shodan-kijun-fix.md（案A: 列ごとに日付軸を固定）
+    # 着手にはソースのGit取り込み（clasp clone）が先に必要。最優先。
     role: 商談分析スプレッドシートの集計・整形
     data_sources: [mse_shodan_bunseki_2026]
     status: active

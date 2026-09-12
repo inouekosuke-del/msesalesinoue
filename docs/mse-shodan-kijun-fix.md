@@ -147,17 +147,71 @@ SFレポート「GAS用_mse商品分析」は作成日 2026/01/01〜12/31 で抽
 
 ## 5. 実施手順
 
+### 手順0（先に1回だけ・井上さんのローカルPC）ソースをGitに入れる
+
+このGASのソースは現在Drive上にしかなく、リモートセッションからは取得できない
+（Apps Script API専用スコープが必要で、対話ログインが通らない）。
+まずソースをこのリポジトリに入れる。所要5分。
+
 ```bash
-cd prod && clasp pull && cd ..   # 作業前に必ず引く
+# 1. clasp（初回のみ）
+npm install -g @google/clasp
+clasp login          # ブラウザが開く。inoue.kosuke@makeshop.co.jp でログイン
+# Apps Script API が未有効なら clasp が案内する:
+# https://script.google.com/home/usersettings → 「Google Apps Script API」をオン
+
+# 2. リポジトリ
+git clone https://github.com/inouekosuke-del/msesalesinoue.git
+cd msesalesinoue
+git checkout claude/lucid-edison-kexbgj
+
+# 3. このGASだけ clone
+mkdir -p apps
+clasp clone 1XXk_FClsvJgJs0gRQCX50h82sLf7HNORTD2thrC_XdQxnb3BOdvR_g5p --rootDir ./apps/mse-shodan-bunseki
+
+# 4. 認証情報のベタ書きが無いか確認（あれば PropertiesService に移してから）
+grep -rniE "(password|secret|api[_-]?key|token|Bearer )" apps/mse-shodan-bunseki
+
+# 5. push
+git add apps/mse-shodan-bunseki
+git commit -m "mse商談分析GASのソースをGit管理下に取り込み"
+git push -u origin claude/lucid-edison-kexbgj
+```
+
+補足:
+- このスクリプトの所有者は田村さんだが、**井上さんは朝バッチの実行アカウント＝編集権限を持っている**ため
+  `clasp clone` は通るはず。権限エラーが出たら田村さんに依頼する。
+- `.clasprc.json`（認証情報）は `.gitignore` 済み。コミットされない。
+- clasp のバージョンによってサブコマンド名が違う場合は `clasp --help` で確認する。
+
+push が済んだら、以降のコード改修（3-2 の 1〜7）はリモートセッション側で実施できる。
+
+### 手順1 改修と反映
+
+```bash
+cd apps/mse-shodan-bunseki && clasp pull && cd -   # 作業前に必ず引く
 git diff                          # 他者の変更を確認
 # 3-2 の 1〜7 を1回のテーマとして編集
-cd prod && clasp push && cd ..
+cd apps/mse-shodan-bunseki && clasp push && cd -
 ```
 
 - 反映は**スプレッドシートのメニュー**「mse商談分析」→「集計だけ作り直す（取込なし）」。
   Apps Scriptエディタの「実行」ボタンは使わない（2026-08-28にこれで改修が巻き戻った）。
 - push 直後にエディタタブが開いていたら閉じる。
 - 完了後、`改修履歴` シートに1行残す（日付・版・種別・変更内容・触った関数／シート・影響範囲・確認した数字・実施者）。
+
+---
+
+## 5-2. 手順0が終わるまでの応急処置（コード変更なし・今すぐできる）
+
+原因2（シートごとに期間・基準がバラバラ）だけなら、手で潰せる。
+
+**各集計シートの `B2`（期間）と `D2`（基準）を、全シート同じ値に揃える。**
+推奨は `全期間` / `作成日`。1〜4行目はバッチで上書きされないため、設定は残る。
+
+これでシート間のクロスフットは成立するようになる。
+ただし原因1（受注列と検収列の軸が同じ）は残るので、
+**月を指定したときの「検収売上」「受注売上」は引き続き信用しない。**
 
 ---
 
