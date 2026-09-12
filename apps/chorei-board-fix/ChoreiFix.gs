@@ -218,6 +218,28 @@ function runDiagnostics_() {
     });
   }
 
+  // --- 8. 指示（orders）の完了状態 ---------------------------------------
+  var orders = readTable_(ss, ['id', 'scope', 'targetId', 'text', 'due', 'active']);
+  if (orders) {
+    var doneButActive = 0, allScope = 0, mixedCreated = 0;
+    orders.rows.forEach(function (r) {
+      var isActive = String(r.active).toUpperCase() === 'TRUE';
+      if (isActive && String(r.doneAt || '')) doneButActive++;
+      if (String(r.scope) === 'all') allScope++;
+      var c = String(r.createdAt || '').trim();
+      if (c && !/^\d{4}-\d{2}-\d{2}/.test(c)) mixedCreated++;
+    });
+    rows.push(['8 指示', '完了済み（doneAt あり）なのに active=TRUE',
+      doneButActive, doneButActive + ' / ' + orders.rows.length,
+      doneButActive ? '一覧の抽出条件を active && !doneAt にする（本体のコード）' : 'OK']);
+    rows.push(['8 指示', 'scope=all の指示（個人別の完了を持てない）',
+      allScope, allScope ? '完了は doneAt/doneBy の1組のみ' : '—',
+      allScope ? '個人別に完了させるなら完了レコードを別シートに分ける' : 'OK']);
+    rows.push(['8 指示', 'createdAt の形式が YYYY-MM-DD でない行',
+      mixedCreated, mixedCreated + ' / ' + orders.rows.length,
+      mixedCreated ? '修復_実行() で揃う' : 'OK']);
+  }
+
   return rows;
 }
 
@@ -313,6 +335,23 @@ function buildRepairPlan_() {
       notes.push('members シートに存在しないため名寄せできなかった担当: ' + un.join('、') +
                  ' — 先に members に追加してから再実行すること');
     }
+  }
+
+  // --- 指示の createdAt を 'yyyy-MM-dd HH:mm:ss' に揃える -----------------
+  // '9/7/2026' のような時刻なしの表記が混ざっている。並び替えや比較で揺れるので揃える。
+  var orders = readTable_(ss, ['id', 'scope', 'targetId', 'text', 'due', 'active']);
+  if (orders && orders.header.indexOf('createdAt') >= 0) {
+    var cCol = orders.header.indexOf('createdAt');
+    orders.rows.forEach(function (r, i) {
+      var raw = String(r.createdAt || '').trim();
+      if (!raw || /^\d{4}-\d{2}-\d{2}/.test(raw)) return;
+      var want = safeDate_(r.createdAt, 'yyyy-MM-dd HH:mm:ss');
+      if (!want) return;
+      edits.push({
+        sheet: orders.sheet.getName(), row: orders.firstDataRow + i, col: cCol + 1,
+        from: raw, to: want, why: '指示の createdAt を揃える'
+      });
+    });
   }
 
   return { edits: edits, total: edits.length, notes: notes };
