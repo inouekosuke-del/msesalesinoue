@@ -49,11 +49,13 @@ const ss={getSheets:()=>sheets,getSheetByName:n=>sheets.find(s=>s.getName()===n)
  insertSheet(n){const s=makeSheet(n,[]);sheets.push(s);return s;}};
 global.SpreadsheetApp={openById:()=>ss,flush(){}};
 global.Utilities.getUuid=()=>'abcd1234efgh';
-global.Session={getActiveUser:()=>({getEmail:()=>'inoue.kosuke@makeshop.co.jp'})};
+global.LOGIN='inoue.kosuke@makeshop.co.jp';
+global.Session={getActiveUser:()=>({getEmail:()=>global.LOGIN})};
 global.DriveApp={getFileById:()=>({makeCopy:()=>({getUrl:()=>'(test)'})})};
 eval(fs.readFileSync('ChoreiFix.js','utf8'));
 eval(fs.readFileSync('ChoreiAgg.js','utf8'));
 eval(fs.readFileSync('ChoreiPick.js','utf8'));
+eval(fs.readFileSync('ChoreiAuth.js','utf8'));
 eval(fs.readFileSync('ChoreiOrder.js','utf8'));
 
 console.log('===== 診断() =====');
@@ -124,6 +126,41 @@ Logger._l=[]; 指示を出す(ok); console.log(' ',Logger._l.join('\n'));
 console.log('\n===== 指示の消化状況() =====');
 for(const r of 指示の消化状況().slice(0,6))
   console.log(`  [${r.期限切れ?'期限切れ':'　　　　'}]${r.must?'[必達]':'      '} ${r.who}\t${r.done}/${r.count}\t~${r.due}\t${r.what.slice(0,42)}`);
+
+console.log('\n===== 権限 =====');
+Logger._l=[]; アクセス診断(); console.log(Logger._l.join('\n'));
+for(const e of ['tamura@makeshop.co.jp','dareka@makeshop.co.jp','soto@example.com']){
+  const a=権限を判定(e);
+  console.log(`  ${e.padEnd(30)} ok=${a.ok} role=${a.role||'-'} 指示=${a.can.issue} 編集=${a.can.edit} ${a.reason}`);
+}
+
+console.log('\n===== メンバー_閲覧のみを外す =====');
+Logger._l=[]; メンバー_閲覧のみを外す_ドライラン(); console.log(Logger._l.join('\n'));
+Logger._l=[]; メンバー_閲覧のみを外す_実行(); console.log(Logger._l.slice(-1).join('\n'));
+console.log('  外した後:', 権限を判定('tamura@makeshop.co.jp').role, '/ 編集', 権限を判定('tamura@makeshop.co.jp').can.edit);
+console.log('  チーム一覧:', チーム一覧().join(' / '));
+
+console.log('\n===== 全員 / チーム / 個人 =====');
+for(const t of [
+  {scope:'all',  targetId:'',        label:'全員'},
+  {scope:'team', targetId:'success',  label:'チーム'},
+  {scope:'team', targetId:'nosuch',   label:'存在しないチーム'},
+  {scope:'one',  targetId:'hirose',   label:'個人'},
+  {scope:'one',  targetId:'tamura',   label:'無効化した人'},
+]){
+  const o={...t,actionId:'partner',targetKind:'list',targetRef:'代理店リスト',count:3,due:'2026-09-20 18:00'};
+  const e=指示を検証(o);
+  console.log(`  ${t.label.padEnd(9)} ${e.length? 'NG: '+e.join(' / ') : 'OK  宛先='+指示の宛先(o).join(',')}`);
+  if(!e.length) console.log(`             文面: ${指示の文面(o)}`);
+}
+
+console.log('\n===== 権限のない人が指示を出す =====');
+for(const who of ['hirose@makeshop.co.jp','dareka@makeshop.co.jp','takeuchi@makeshop.co.jp']){
+  global.LOGIN=who;
+  try{ 指示権限を要求_(); console.log(`  ${who.padEnd(28)} → 出せる`); }
+  catch(e){ console.log(`  ${who.padEnd(28)} → ${e.message}`); }
+}
+global.LOGIN='inoue.kosuke@makeshop.co.jp';
 
 console.log('\n===== 指示の完了 =====');
 Logger._l=[]; 指示_完了済みを片付ける_ドライラン(); console.log(Logger._l.join('\n'));

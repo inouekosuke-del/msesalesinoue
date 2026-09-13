@@ -56,8 +56,9 @@ function addOrderCols_(apply) {
  * 構造化された指示を1件追加する。
  *
  * @param {Object} o
- *   - scope      'one' | 'all'
- *   - targetId   scope='one' のときの担当者id
+ *   - scope      'all'（全員） | 'team'（チーム） | 'one'（個人）
+ *   - targetId   scope='team' ならチーム名（mse / success / cs / admin）
+ *                scope='one'  なら担当者id。scope='all' なら空
  *   - actionId   アクションプランのid。例 'partner'
  *   - targetKind 'deal' | 'segment' | 'list' | 'free'
  *   - targetRef  対象。'代理店リスト' / lineId など
@@ -68,6 +69,7 @@ function addOrderCols_(apply) {
  * @return {Object} 追加した行
  */
 function 指示を出す(o) {
+  指示権限を要求_();                 // 指示を出せるのは master / lead だけ
   var err = 指示を検証(o);
   if (err.length) throw new Error('指示の内容が不正です:\n  ' + err.join('\n  '));
 
@@ -129,13 +131,66 @@ function 指示を検証(o) {
 
   if (!String(o.targetRef || '').trim()) err.push('targetRef（どこに対して）が未指定');
 
-  if ((o.scope || 'one') === 'one') {
-    if (!o.targetId) err.push('scope=one なら targetId（担当者）が必要');
-    else if (members && !members.rows.some(function (m) { return String(m.id) === String(o.targetId); })) {
-      err.push('担当者 "' + o.targetId + '" が メンバー シートにありません');
+  var scope = o.scope || 'one';
+  if (SCOPES.indexOf(scope) < 0) {
+    err.push('scope は ' + SCOPES.join(' / ') + ' のいずれかにすること（いまは ' + scope + '）');
+  } else if (scope === 'one') {
+    if (!o.targetId) err.push('scope=one なら targetId（担当者id）が必要');
+    else if (members && !活動中のメンバー_(members).some(function (m) { return String(m.id) === String(o.targetId); })) {
+      err.push('担当者 "' + o.targetId + '" が メンバー シートに居ないか、active=FALSE です');
+    }
+  } else if (scope === 'team') {
+    if (!o.targetId) err.push('scope=team なら targetId（チーム名）が必要');
+    else if (members) {
+      var teams = チーム一覧(members);
+      if (teams.indexOf(String(o.targetId)) < 0) {
+        err.push('チーム "' + o.targetId + '" が存在しません。いまあるのは ' + teams.join(' / '));
+      }
     }
   }
   return err;
+}
+
+
+// 指示の宛先。狭い順に並べてある。
+var SCOPES = ['all', 'team', 'one'];
+
+/** active=TRUE かつ閲覧専用でないメンバーだけを返す。 */
+function 活動中のメンバー_(members) {
+  return members.rows.filter(function (m) {
+    return String(m.active).toUpperCase() === 'TRUE' && String(m.role) !== 'viewer';
+  });
+}
+
+/** いま存在するチーム名を返す。 */
+function チーム一覧(members) {
+  if (!members) {
+    members = readTable_(SpreadsheetApp.openById(DATA_SS_ID), ['id', 'sfName', 'slackId']);
+  }
+  var seen = {};
+  活動中のメンバー_(members).forEach(function (m) {
+    var t = String(m.team || '').trim();
+    if (t) seen[t] = 1;
+  });
+  return Object.keys(seen).sort();
+}
+
+/**
+ * 指示が誰に向いているかを、メンバーidの配列で返す。
+ * 画面もSlack通知もこれを使えば、all / team / one を同じ扱いにできる。
+ */
+function 指示の宛先(order, members) {
+  if (!members) {
+    members = readTable_(SpreadsheetApp.openById(DATA_SS_ID), ['id', 'sfName', 'slackId']);
+  }
+  var live = 活動中のメンバー_(members);
+  var scope = String(order.scope || 'one');
+  if (scope === 'all') return live.map(function (m) { return String(m.id); });
+  if (scope === 'team') {
+    return live.filter(function (m) { return String(m.team) === String(order.targetId); })
+               .map(function (m) { return String(m.id); });
+  }
+  return order.targetId ? [String(order.targetId)] : [];
 }
 
 
@@ -148,8 +203,22 @@ function 指示の文面(o) {
     var p = plans.rows.filter(function (r) { return String(r.id) === String(o.actionId); })[0];
     if (p) name = String(p.name);
   }
-  return name + ' を ' + o.targetRef + ' に対して ' + o.count + '件、' +
+  return 宛先の表示(o) + name + ' を ' + o.targetRef + ' に対して ' + o.count + '件、' +
          safeDate_(o.due, 'M/d HH:mm') + ' まで';
+}
+
+/** 「【全員】」「【mseチーム】」「【植松】」のような見出しを返す。 */
+function 宛先の表示(o) {
+  var scope = String(o.scope || 'one');
+  if (scope === 'all') return '【全員】';
+  if (scope === 'team') return '【' + o.targetId + 'チーム】';
+  var members = readTable_(SpreadsheetApp.openById(DATA_SS_ID), ['id', 'sfName', 'slackId']);
+  var nm = o.targetId;
+  if (members) {
+    var m = members.rows.filter(function (x) { return String(x.id) === String(o.targetId); })[0];
+    if (m) nm = String(m.name || m.id);
+  }
+  return '【' + nm + '】';
 }
 
 
@@ -161,6 +230,7 @@ function 指示の消化状況(memberId) {
   var ss = SpreadsheetApp.openById(DATA_SS_ID);
   var orders = readTable_(ss, ['id', 'scope', 'targetId', 'text', 'due', 'active']);
   if (!orders) return [];
+  var members = readTable_(ss, ['id', 'sfName', 'slackId']);
   var hasNew = orders.header.indexOf('count') >= 0;
 
   var now = Date.now();
@@ -168,15 +238,18 @@ function 指示の消化状況(memberId) {
   orders.rows.forEach(function (r) {
     if (String(r.active).toUpperCase() !== 'TRUE') return;
     if (String(r.doneAt || '')) return;                       // 完了済みは出さない
-    if (memberId && String(r.scope) === 'one' && String(r.targetId) !== memberId) return;
+    // all / team / one を宛先の配列に展開してから絞る
+    if (memberId && 指示の宛先(r, members).indexOf(memberId) < 0) return;
 
     var due = toDate_(r.due);
     var cnt = hasNew ? num_(r.count) : 0;
     var done = hasNew ? num_(r.doneCount) : 0;
     out.push({
       id: String(r.id),
-      who: String(r.scope) === 'all' ? '全員' : String(r.targetId),
+      who: 宛先の表示(r),
+      宛先: 指示の宛先(r, members),
       what: hasNew && cnt ? 指示の文面({
+        scope: r.scope, targetId: r.targetId,
         actionId: r.actionId, targetRef: r.targetRef, count: cnt, due: r.due
       }) : String(r.text),
       // 従来どおりの text だけの指示は件数を持たない。0/0 と出さず null にして、
