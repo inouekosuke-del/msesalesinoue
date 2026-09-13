@@ -144,10 +144,7 @@ function demoteViewers_(apply) {
   Logger.log('外したあとも @' + VIEW_DOMAIN + ' のアカウントであれば閲覧はできる。');
 
   if (apply && targets.length) {
-    var backup = DriveApp.getFileById(DATA_SS_ID)
-      .makeCopy('【メンバー整理前】MSE朝礼ボード_データ ' +
-                Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'));
-    Logger.log('バックアップ: ' + backup.getUrl());
+    バックアップを作る_('メンバー整理前');
     targets.forEach(function (t) {
       if (cRole >= 0) members.sheet.getRange(t.row, cRole + 1).setValue('viewer');
       if (cActive >= 0) members.sheet.getRange(t.row, cActive + 1).setValue('FALSE');

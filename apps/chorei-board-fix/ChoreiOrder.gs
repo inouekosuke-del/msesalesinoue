@@ -343,10 +343,7 @@ function tidyDoneOrders_(apply) {
   targets.forEach(function (t) { Logger.log('  ' + t.id + ' : ' + t.text.slice(0, 44)); });
 
   if (apply && targets.length) {
-    var backup = DriveApp.getFileById(DATA_SS_ID)
-      .makeCopy('【指示の片付け前】MSE朝礼ボード_データ ' +
-                Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'));
-    Logger.log('バックアップ: ' + backup.getUrl());
+    バックアップを作る_('指示の片付け前');
     targets.forEach(function (t) { orders.sheet.getRange(t.row, col + 1).setValue('FALSE'); });
     SpreadsheetApp.flush();
     Logger.log('active を FALSE にしました。一覧から消えます。');

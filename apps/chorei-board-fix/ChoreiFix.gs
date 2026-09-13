@@ -52,14 +52,10 @@ function 修復_実行() {
     return plan;
   }
 
-  var backup = DriveApp.getFileById(DATA_SS_ID)
-    .makeCopy('【修復前バックアップ】MSE朝礼ボード_データ ' +
-              Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'));
-  Logger.log('バックアップ: ' + backup.getUrl());
-
+  var backup = バックアップを作る_('修復前');
   applyRepairPlan_(plan);
   logPlan_(plan, false);
-  Logger.log('バックアップ: ' + backup.getUrl());
+  if (backup) Logger.log('戻すときはこのバックアップから: ' + backup.getUrl());
   return plan;
 }
 
@@ -561,6 +557,20 @@ function memberIndex_(memberRows) {
     });
   });
   return idx;
+}
+
+// セットアップ_実行() のように複数の修復を続けて走らせるとき、
+// それぞれがコピーを作ると4つ増えてどれが正か分からなくなる。
+// 先頭で1つ作ったら、以降は作らない。
+var BACKUP_TAKEN_ = false;
+
+function バックアップを作る_(label) {
+  if (BACKUP_TAKEN_) return null;
+  var f = DriveApp.getFileById(DATA_SS_ID)
+    .makeCopy('【' + label + '】MSE朝礼ボード_データ ' +
+              Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'));
+  Logger.log('バックアップ: ' + f.getUrl());
+  return f;
 }
 
 function num_(v) {
