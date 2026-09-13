@@ -12,6 +12,7 @@ ORDER = [
     ('ChoreiPick.gs',  '案件候補の絞り込み'),
     ('ChoreiAuth.gs',  '権限'),
     ('ChoreiOrder.gs', '指示'),
+    ('ChoreiTrigger.gs','取り込みトリガーの張り替え'),
 ]
 HERE = os.path.dirname(os.path.abspath(__file__))
 

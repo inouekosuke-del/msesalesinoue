@@ -1,0 +1,149 @@
+<!--
+  朝礼ボードの画面側の当て物。
+
+  Index.html（または画面のHTML）の一番下、</body> の直前に
+  <?!= HtmlService.createHtmlOutputFromFile('ChoreiClient').getContent(); ?>
+  で読み込むか、この <script> の中身をそのまま貼る。
+
+  やること
+    1. クリックすると先頭にスクロールする問題を自動で直す
+    2. 一覧を作り直すときにスクロール位置を保つ 安全に描画() を用意する
+    3. 完了した指示が消えない問題の、画面側の判定を用意する
+
+  1 は読み込むだけで効く。2 と 3 は既存のコードから呼ぶ必要がある。
+-->
+<script>
+(function () {
+  'use strict';
+
+  // =======================================================================
+  // 1. クリックで先頭にスクロールするのを止める（自動）
+  // =======================================================================
+  //
+  // 原因は2つ。どちらもマークアップを読まなくても直せる。
+  //   a) <form> の中の <button> に type が無い → 既定が submit で、送信→再読込が走る
+  //   b) <a href="#"> をボタン代わりに使っている → # への遷移で先頭にジャンプする
+
+  function ボタンを固める(root) {
+    var n = 0;
+    var bs = (root || document).querySelectorAll('button:not([type])');
+    for (var i = 0; i < bs.length; i++) { bs[i].type = 'button'; n++; }
+    return n;
+  }
+
+  // href="#" と href="javascript:..." のアンカーは、既定動作を止める。
+  // 個々の要素を書き換えるのではなく、document で1回だけ捕まえる。
+  // あとから差し込まれた要素にも効く。
+  function アンカーを止める() {
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest && e.target.closest('a');
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (href === '#' || href === '' || (href && href.indexOf('javascript:') === 0)) {
+        e.preventDefault();   // ページ内ジャンプを止める。onclick は通常どおり動く
+      }
+    }, true);
+  }
+
+  function 初期化() {
+    var n = ボタンを固める(document);
+    アンカーを止める();
+
+    // あとから足されたボタンにも効かせる
+    if (window.MutationObserver) {
+      new MutationObserver(function (recs) {
+        for (var i = 0; i < recs.length; i++) {
+          var added = recs[i].addedNodes;
+          for (var j = 0; j < added.length; j++) {
+            if (added[j].nodeType === 1) ボタンを固める(added[j]);
+          }
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (window.console) console.log('[朝礼ボード] type 未指定のボタン ' + n + '個を button に変更');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', 初期化);
+  } else {
+    初期化();
+  }
+
+
+  // =======================================================================
+  // 2. 一覧を作り直してもスクロール位置を保つ（呼び出しが要る）
+  // =======================================================================
+  //
+  // el.innerHTML = ... で中身を差し替えると、DOMが作り直されて位置が失われる。
+  // 既存のコードの
+  //     list.innerHTML = render(items);
+  // を
+  //     安全に描画(list, function () { list.innerHTML = render(items); });
+  // に置き換える。
+
+  window.安全に描画 = function (el, 描画) {
+    if (!el) { 描画(); return; }
+
+    // その要素自身が縦スクロールしているとは限らない。
+    // 実際にスクロールしている親をたどって覚えておく。
+    var scroller = el;
+    while (scroller && scroller !== document.body) {
+      var ov = getComputedStyle(scroller).overflowY;
+      if ((ov === 'auto' || ov === 'scroll') && scroller.scrollHeight > scroller.clientHeight) break;
+      scroller = scroller.parentElement;
+    }
+    var useWindow = !scroller || scroller === document.body;
+    var top = useWindow ? (window.pageYOffset || document.documentElement.scrollTop)
+                        : scroller.scrollTop;
+
+    // どこにフォーカスがあったかも覚える。戻さないと、操作のたびに
+    // フォーカスが飛んでキーボード操作が続かない。
+    var active = document.activeElement;
+    var activeId = active && active.id ? active.id : null;
+
+    描画();
+
+    if (useWindow) window.scrollTo(0, top);
+    else scroller.scrollTop = top;
+
+    if (activeId) {
+      var again = document.getElementById(activeId);
+      if (again && again.focus) again.focus();
+    }
+  };
+
+
+  // =======================================================================
+  // 3. 完了した指示を画面から消す（呼び出しが要る）
+  // =======================================================================
+  //
+  // サーバ側は 指示を完了にする() が doneAt / doneBy / active=FALSE を同時に書く。
+  // 画面側も、抽出条件をここに寄せる。active だけを見ていると消えない。
+
+  window.表示する指示か = function (o) {
+    if (!o) return false;
+    if (String(o.active).toUpperCase() === 'FALSE') return false;
+    if (o.doneAt) return false;          // ← これが無いと完了しても消えない
+    return true;
+  };
+
+  /**
+   * 完了ボタンから呼ぶ。サーバの書き込みが終わってから一覧を作り直す。
+   *
+   * google.script.run は非同期なので、呼んだ直後に読み直すと
+   * 書き込み前のデータを読んで「復活したように見える」。必ず成功してから描画する。
+   */
+  window.指示を完了 = function (id, 再描画) {
+    var 行 = document.querySelector('[data-order-id="' + id + '"]');
+    if (行) 行.style.opacity = '0.4';     // 二度押し防止と、効いていることの表示
+
+    google.script.run
+      .withSuccessHandler(function () { if (再描画) 再描画(); })
+      .withFailureHandler(function (e) {
+        if (行) 行.style.opacity = '';
+        alert('完了にできませんでした: ' + (e && e.message ? e.message : e));
+      })
+      .指示を完了にする(id);
+  };
+})();
+</script>
