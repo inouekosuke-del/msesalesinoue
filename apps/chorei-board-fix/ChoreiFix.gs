@@ -77,26 +77,46 @@ function runDiagnostics_() {
   var todo = readTable_(ss, ['lineId', 'todoDue', 'todoOwner']);
   var mTargets = readTable_(ss, ['month', 'memberId', 'targetJuchu']);
 
-  // --- 1. 案件テーブルとTODOのカバレッジ差 -------------------------------
-  if (deals && todo) {
-    var dealKeys = {};
+  // --- 1. 二重取り込み ---------------------------------------------------
+  if (deals) {
+    var perKey = {};
     deals.rows.forEach(function (r) {
-      var id = String(r.lineId || '');
-      if (id && id.slice(-2) !== '#K') dealKeys[id] = true;
+      var k = String(r.lineId || '') + '\u0000' + String(r.side || '');
+      (perKey[k] = perKey[k] || []).push(r);
     });
-    var todoOnly = {};
-    todo.rows.forEach(function (r) {
-      var id = String(r.lineId || '');
-      if (id && !dealKeys[id]) todoOnly[id] = true;
+    var exactDup = 0, keyClash = 0;
+    Object.keys(perKey).forEach(function (k) {
+      var g = perKey[k];
+      if (g.length < 2) return;
+      // 中身まで同じなら重複取り込み。違うなら別案件のキー衝突（不具合4）
+      var sigs = {};
+      g.forEach(function (r) {
+        sigs[[r.title, r.juchuDate, r.kenshuDate, r.ownerName, r.stage].join('|')] = 1;
+      });
+      if (Object.keys(sigs).length === 1) exactDup += g.length - 1; else keyClash++;
     });
-    var keys = Object.keys(todoOnly);
-    var amt = keys.reduce(function (s, k) { return s + amountFromLineId_(k); }, 0);
-    rows.push(['1 取り込み', 'TODOにあって案件テーブルに無い案件',
-      keys.length, yen_(amt),
-      keys.length ? '案件側のSFレポートのフィルタを確認する' : 'OK']);
+    rows.push(['1 取り込み', '中身まで同一の重複行（二重取り込みの残骸）',
+      exactDup, exactDup ? '同じレポートを2回処理した可能性' : '—',
+      exactDup ? '取り込みを全消し→全書き込みにするか、書き込み前に重複を落とす' : 'OK']);
+
+    // 監査ログの ingest 行から files=2 の日を拾う
+    var log = readTable_(ss, ['at', 'email', 'action', 'detail']);
+    if (log) {
+      var multi = [];
+      log.rows.forEach(function (r) {
+        if (String(r.action).indexOf('ingest') !== 0) return;
+        var m = String(r.detail).match(/files=(\d+)\s+deals=(\d+)/);
+        if (m && Number(m[1]) > 1) {
+          multi.push(safeDate_(r.at, 'MM/dd') + '(files=' + m[1] + ' deals=' + m[2] + ')');
+        }
+      });
+      rows.push(['1 取り込み', '1回の取り込みで2ファイル以上を処理した日',
+        multi.length, multi.slice(-6).join(' ') || '—',
+        multi.length ? 'その日の数字は倍になっている可能性がある。取り込み側の修正が必要' : 'OK']);
+    }
   }
 
-  // --- 2. 担当者の名寄せ失敗 --------------------------------------------
+  // --- 2. 名寄せ ---------------------------------------------------------
   if (deals && members) {
     var byName = memberIndex_(members.rows);
     var unresolved = {};
@@ -105,7 +125,7 @@ function runDiagnostics_() {
       if (String(r.side) !== '受注') return;               // 受注行だけ数える
       if (String(r.ownerId || '')) return;
       var nm = String(r.ownerName || '').trim();
-      if (!nm) return;
+      if (!nm || isNonMemberOwner_(nm)) return;
       unresolved[nm] = (unresolved[nm] || 0) + 1;
       if (!byName[normName_(nm)]) lost += num_(r.amount);
     });
@@ -131,23 +151,24 @@ function runDiagnostics_() {
       blank ? '同上' : 'OK']);
   }
 
-  // --- 3. 月キーのゼロ埋め ----------------------------------------------
+  // --- 3. 月キーの列が日付型になっていないか -----------------------------
   if (deals) {
-    var badCells = 0, badAmt = 0, seen = {};
+    var dateTyped = 0, mismatched = 0;
     deals.rows.forEach(function (r) {
-      var hit = false;
-      [['juchuDate', 'juchuMonth'], ['kenshuDate', 'kenshuMonth']].forEach(function (p) {
-        var want = toMonthKey_(r[p[0]]);
-        if (want && want !== String(r[p[1]] || '')) { badCells++; hit = true; }
+      ['juchuMonth', 'kenshuMonth'].forEach(function (c) {
+        var v = r[c];
+        if (v instanceof Date) dateTyped++;
+        else if (v !== '' && v != null) {
+          var want = toMonthKey_(r[c === 'juchuMonth' ? 'juchuDate' : 'kenshuDate']);
+          if (want && String(v) !== want) mismatched++;
+        }
       });
-      if (hit && String(r.side) === '受注' && !seen[r.lineId]) {
-        seen[r.lineId] = true;
-        badAmt += num_(r.amount);
-      }
     });
-    rows.push(['3 月キー', 'ゼロ埋めされていない月キー',
-      badCells, yen_(badAmt) + ' 相当の案件が別の月に集計される',
-      badCells ? '修復_実行() で洗い替え。取り込み側も toMonthKey_ に直す' : 'OK']);
+    rows.push(['2 月キー', '日付セルになっている月キー',
+      dateTyped, dateTyped ? 'getValues() が Date を返すので文字列比較が全部外れる' : '—',
+      dateTyped ? '修復_実行() で列をテキスト化して書き直す' : 'OK']);
+    rows.push(['2 月キー', '日付と食い違う月キー（文字列のもの）',
+      mismatched, mismatched || '—', mismatched ? '同上' : 'OK']);
   }
 
   // --- 4. 一意キーの衝突 -------------------------------------------------
@@ -155,7 +176,7 @@ function runDiagnostics_() {
     var cnt = {}, noOpp = 0;
     deals.rows.forEach(function (r) {
       var id = String(r.lineId || '');
-      if (id) cnt[id] = (cnt[id] || 0) + 1;
+      if (id && id.slice(-2) !== '#K') cnt[id] = (cnt[id] || 0) + 1;   // 受注側だけ数える
       if (!String(r.oppId || '')) noOpp++;
     });
     // 受注行と計上行は lineId が別（計上は末尾 #K）。同じキーが2行以上あれば別案件の衝突。
@@ -174,7 +195,7 @@ function runDiagnostics_() {
     var diffs = [], missing = [];
     var tIndex = {};
     mTargets.rows.forEach(function (r) {
-      if (String(r.month) === thisMonth) tIndex[String(r.memberId)] = r;
+      if (toMonthKey_(r.month) === thisMonth) tIndex[String(r.memberId)] = r;
     });
     members.rows.forEach(function (m) {
       if (String(m.active).toUpperCase() === 'FALSE') return;
@@ -221,13 +242,11 @@ function runDiagnostics_() {
   // --- 8. 指示（orders）の完了状態 ---------------------------------------
   var orders = readTable_(ss, ['id', 'scope', 'targetId', 'text', 'due', 'active']);
   if (orders) {
-    var doneButActive = 0, allScope = 0, mixedCreated = 0;
+    var doneButActive = 0, allScope = 0;
     orders.rows.forEach(function (r) {
       var isActive = String(r.active).toUpperCase() === 'TRUE';
       if (isActive && String(r.doneAt || '')) doneButActive++;
       if (String(r.scope) === 'all') allScope++;
-      var c = String(r.createdAt || '').trim();
-      if (c && !/^\d{4}-\d{2}-\d{2}/.test(c)) mixedCreated++;
     });
     rows.push(['8 指示', '完了済み（doneAt あり）なのに active=TRUE',
       doneButActive, doneButActive + ' / ' + orders.rows.length,
@@ -235,9 +254,7 @@ function runDiagnostics_() {
     rows.push(['8 指示', 'scope=all の指示（個人別の完了を持てない）',
       allScope, allScope ? '完了は doneAt/doneBy の1組のみ' : '—',
       allScope ? '個人別に完了させるなら完了レコードを別シートに分ける' : 'OK']);
-    rows.push(['8 指示', 'createdAt の形式が YYYY-MM-DD でない行',
-      mixedCreated, mixedCreated + ' / ' + orders.rows.length,
-      mixedCreated ? '修復_実行() で揃う' : 'OK']);
+
   }
 
   return rows;
@@ -268,25 +285,30 @@ function writeReport_(rows) {
  */
 function buildRepairPlan_() {
   var ss = SpreadsheetApp.openById(DATA_SS_ID);
-  var edits = [];
+  var edits = [];          // セル単位の書き換え
+  var columnWrites = [];   // 列まるごとの一括書き換え（数千セルになるため）
   var notes = [];
 
   // --- 月キーの洗い替え --------------------------------------------------
+  // 列が日付型になっているので、セル単位で直すと Sheets がまた日付に変換してしまう。
+  // 「列をテキスト書式にする」→「日付から導出した文字列を一括で書く」の順でしか直らない。
   var deals = readTable_(ss, ['lineId', 'juchuMonth', 'kenshuMonth', 'side']);
-  if (deals) {
-    deals.rows.forEach(function (r, i) {
-      [['juchuDate', 'juchuMonth'], ['kenshuDate', 'kenshuMonth']].forEach(function (p) {
-        var want = toMonthKey_(r[p[0]]);
-        var now = String(r[p[1]] || '');
-        if (want && want !== now) {
-          edits.push({
-            sheet: deals.sheet.getName(),
-            row: deals.firstDataRow + i,
-            col: deals.header.indexOf(p[1]) + 1,
-            from: now, to: want,
-            why: '月キーのゼロ埋め（' + r.company + '）'
-          });
-        }
+  if (deals && deals.rows.length) {
+    [['juchuDate', 'juchuMonth'], ['kenshuDate', 'kenshuMonth']].forEach(function (p) {
+      var col = deals.header.indexOf(p[1]);
+      if (col < 0) return;
+      var want = deals.rows.map(function (r) { return [toMonthKey_(r[p[0]])]; });
+      var changed = 0;
+      deals.rows.forEach(function (r, i) {
+        var cur = r[p[1]];
+        // Date なら必ず要修正。文字列でも導出値と違えば要修正。
+        if (cur instanceof Date || String(cur) !== want[i][0]) changed++;
+      });
+      if (!changed) return;
+      columnWrites.push({
+        sheet: deals.sheet.getName(), col: col + 1, firstRow: deals.firstDataRow,
+        values: want, changed: changed, asText: true,
+        why: p[1] + ' を日付から導出した文字列に直す（列をテキスト書式にしてから書く）'
       });
     });
   }
@@ -303,7 +325,7 @@ function buildRepairPlan_() {
         deals.rows.forEach(function (r, i) {
           if (String(r.ownerId || '')) return;
           var nm = String(r.ownerName || '').trim();
-          if (!nm) return;
+          if (!nm || isNonMemberOwner_(nm)) return;
           var id = idx[normName_(nm)];
           if (!id) { unknown[nm] = true; return; }
           edits.push({
@@ -337,32 +359,27 @@ function buildRepairPlan_() {
     }
   }
 
-  // --- 指示の createdAt を 'yyyy-MM-dd HH:mm:ss' に揃える -----------------
-  // '9/7/2026' のような時刻なしの表記が混ざっている。並び替えや比較で揺れるので揃える。
-  var orders = readTable_(ss, ['id', 'scope', 'targetId', 'text', 'due', 'active']);
-  if (orders && orders.header.indexOf('createdAt') >= 0) {
-    var cCol = orders.header.indexOf('createdAt');
-    orders.rows.forEach(function (r, i) {
-      var raw = String(r.createdAt || '').trim();
-      if (!raw || /^\d{4}-\d{2}-\d{2}/.test(raw)) return;
-      var want = safeDate_(r.createdAt, 'yyyy-MM-dd HH:mm:ss');
-      if (!want) return;
-      edits.push({
-        sheet: orders.sheet.getName(), row: orders.firstDataRow + i, col: cCol + 1,
-        from: raw, to: want, why: '指示の createdAt を揃える'
-      });
-    });
-  }
-
-  return { edits: edits, total: edits.length, notes: notes };
+  var colCells = columnWrites.reduce(function (n, c) { return n + c.changed; }, 0);
+  return { edits: edits, columnWrites: columnWrites,
+           total: edits.length + colCells, notes: notes };
 }
 
 function applyRepairPlan_(plan) {
   var ss = SpreadsheetApp.openById(DATA_SS_ID);
   var cache = {};
+  function sheetOf(name) { return cache[name] || (cache[name] = ss.getSheetByName(name)); }
+
+  // 列まるごとの書き換えを先に。数千セルをセル単位で書くと実行時間を使い切る。
+  (plan.columnWrites || []).forEach(function (c) {
+    var sh = sheetOf(c.sheet);
+    var rng = sh.getRange(c.firstRow, c.col, c.values.length, 1);
+    // 先にテキスト書式にしないと、書いた文字列がまた日付に変換される
+    if (c.asText) rng.setNumberFormat('@');
+    rng.setValues(c.values);
+  });
+
   plan.edits.forEach(function (e) {
-    var sh = cache[e.sheet] || (cache[e.sheet] = ss.getSheetByName(e.sheet));
-    sh.getRange(e.row, e.col).setValue(e.to);
+    sheetOf(e.sheet).getRange(e.row, e.col).setValue(e.to);
   });
   SpreadsheetApp.flush();
 }
@@ -370,6 +387,10 @@ function applyRepairPlan_(plan) {
 function logPlan_(plan, isDryRun) {
   var head = isDryRun ? '【ドライラン】書き換え予定 ' : '【実行済み】書き換え ';
   Logger.log(head + plan.total + ' セル');
+  (plan.columnWrites || []).forEach(function (c) {
+    Logger.log('  [列一括] ' + c.sheet + ' 第' + c.col + '列 ' + c.changed + ' セル : ' + c.why);
+    Logger.log('           例: ' + c.values.slice(0, 3).map(function (v) { return v[0]; }).join(', '));
+  });
   var byWhy = {};
   plan.edits.forEach(function (e) {
     var k = e.why.replace(/（.*$/, '');
@@ -467,6 +488,13 @@ function normName_(s) {
 }
 
 /** members シートから 氏名/略称 -> id の索引を作る。 */
+/** 担当者ではない書き手。名寄せ対象から外す。 */
+var NON_MEMBER_OWNERS = { 'APIIntegration': 1, 'API Integration': 1 };
+
+function isNonMemberOwner_(name) {
+  return !!NON_MEMBER_OWNERS[normName_(name)] || !!NON_MEMBER_OWNERS[String(name || '').trim()];
+}
+
 function memberIndex_(memberRows) {
   var idx = {};
   memberRows.forEach(function (m) {

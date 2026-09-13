@@ -149,10 +149,10 @@ sources:
     consumed_by: ["gas:chorei_board"]
     related: [MSE朝礼ボード_ソース（フォルダ 1hVnWNMttCtTdvkplcconwtcENYcgI-MS。空）]
     notes: |
-      Salesforceから案件・TODOを取り込む。取り込み元は sf_report_keijo / sf_report_juchu 系
-      （計上ステータス軸）と推定。本体のソースが未取得のため確定はしていない。
-      その結果、確度A/C/C+の見込み案件が1件も入らず、受注見込みが積み上がらない。
-      詳細 → docs/chorei-board-audit-2026-09-11.md
+      Salesforceのレポートをメール添付CSVで受け取り、1日2回取り込む。
+      ファイル名は「GAS朝礼用MSE　全案件2026年受注-YYYY-MM-DD-HH-MM-SS.csv」（全案件が対象）。
+      同じ日に2通届くと2通とも処理して案件が倍になる（9/10〜9/12に発生）。
+      詳細 → docs/chorei-board-audit-2026-09-13.md
 
   - key: chohyo_app_data
     name: MSE帳票アプリ
@@ -197,9 +197,7 @@ sources:
     owner: Salesforce
     role: 計上予定の案件レポート
     status: active
-    consumed_by: [alert-overdue-mse, analyze-pipeline-mse, "gas:chorei_board?"]
-    notes: 計上ステータス軸のレポートで、パイプライン確度（A/B/C/C+/D）を持たない。
-      朝礼ボードがこれを見込みの母数に使っている疑いがある（要ソース確認）。
+    consumed_by: [alert-overdue-mse, analyze-pipeline-mse]
     action_required: 2027-01〜04（同FY26）のレポートID未提供。2026年内に追加が必要。
 
   - key: sf_report_juchu
@@ -218,9 +216,8 @@ sources:
     owner: Salesforce
     role: 受注予定・実績の案件レポート
     status: active
-    consumed_by: [alert-overdue-mse, "gas:chorei_board?"]
+    consumed_by: [alert-overdue-mse]
     notes: 「2026MM 受注見込＋実績」はマトリックス形式のため使用不可。必ず「予定実績」版を使う。
-      sf_report_keijo と同じく確度を持たない。朝礼ボードの受注見込みの母数には使えない。
     action_required: 2027-01〜04（同FY26）のレポートID未提供。
 
   - key: sf_todo_listview
@@ -230,5 +227,4 @@ sources:
     owner: Salesforce
     role: 次回TODOの期日管理
     status: active
-    consumed_by: [alert-overdue-mse, "gas:chorei_board"]
-    notes: 朝礼ボードのTODOシート（310行）もここ由来と推定。件名・状況・oppIdが取得されていない。
+    consumed_by: [alert-overdue-mse]

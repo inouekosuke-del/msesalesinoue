@@ -93,7 +93,9 @@ apps:
     data_sources: [chorei_board_data]
     related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース（作成済みだが中身は空）
     role: 朝礼・終礼の日次投稿、個人別の受注／計上見込み、指示出し、Slack通知
+    ingest: メール添付のCSV（GAS朝礼用MSE　全案件2026年受注-*.csv）を1日2回取り込む
+    data_scale: 案件 4,720行 / TODO 2,042行 / 全22シート・数式なし
     status: active
     source_backed_up: false
-    known_issues: docs/chorei-board-audit-2026-09-11.md   # 集計不具合8件＋UI2件。2026-09-11調査
+    known_issues: docs/chorei-board-audit-2026-09-13.md   # 全データ版。9/11版は誤りを含むため取り下げ
     repair_tool: apps/chorei-board-fix/                  # 診断・修復スクリプト（本体には触らない追加ファイル）

@@ -19,6 +19,8 @@ var STAGE_CATEGORY = {
   '入金済': '確定',
   '検収済': '確定',
   '請求書依頼済': '確定',
+  '請求書発行済': '確定',
+  '納品済': '確定',
   '受注': '確定',
   '内示（A）': '内示',
   '提案中（B）': '提案',
@@ -66,6 +68,7 @@ function 集計_月次見込み(month) {
     if (key !== month) return;
 
     // 約束3: ownerId が空でも氏名から引き直す
+    if (isNonMemberOwner_(r.ownerName)) return;   // API Integration 等のシステムアカウント
     var id = String(r.ownerId || '') || idx[normName_(r.ownerName)] || '';
     if (!id) {
       orphans.push({ company: r.company, owner: r.ownerName, amount: num_(r.amount), side: side });
@@ -90,7 +93,8 @@ function 集計_月次見込み(month) {
   var tIndex = {};
   if (mTargets) {
     mTargets.rows.forEach(function (r) {
-      if (String(r.month) === month) tIndex[String(r.memberId)] = r;
+      // month 列も日付セルなので、必ず正規化してから突合する
+      if (toMonthKey_(r.month) === month) tIndex[String(r.memberId)] = r;
     });
   }
   var list = Object.keys(acc).map(function (id) {

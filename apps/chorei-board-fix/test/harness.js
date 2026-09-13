@@ -1,119 +1,84 @@
-const fs=require('fs');
-// --- CSV -> rows -----------------------------------------------------------
+const fs=require('fs'),path=require('path');
 function parseCSV(t){const rows=[];let f='',r=[],q=false;
  for(let i=0;i<t.length;i++){const c=t[i];
   if(q){ if(c==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
-  else if(c==='"') q=true;
-  else if(c===','){r.push(f);f='';}
-  else if(c==='\n'){r.push(f);rows.push(r);r=[];f='';}
-  else if(c!=='\r') f+=c;}
+  else if(c==='"') q=true; else if(c===','){r.push(f);f='';}
+  else if(c==='\n'){r.push(f);rows.push(r);r=[];f='';} else if(c!=='\r') f+=c;}
  if(f||r.length){r.push(f);rows.push(r);} return rows;}
-
-const NAMES={ '00':'deals','01':'leave','02':'recovery','03':'teams','04':'planMonth',
- '05':'planDaily','06':'focus','07':'monthTargets','08':'histDaily','09':'histMonth',
- '10':'monthPlan','11':'todo','12':'dailyAm','13':'dailyPm','14':'dealActions',
- '15':'orders','16':'orderResults','17':'plans','18':'members','19':'config',
- '20':'importLog','21':'state' };
-
-const sheets=[];
-for(const k of Object.keys(NAMES)){
-  const p=`sheets/block${k}.csv`; if(!fs.existsSync(p)) continue;
-  sheets.push(makeSheet(NAMES[k], parseCSV(fs.readFileSync(p,'utf8')).filter(r=>r.length>1||r[0]!=='')));
-}
+// xlsx由来のCSVは日付が 'YYYY-MM-DD HH:MM:SS' 文字列。実GASと同じく Date に戻す
+const DATEISH=/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+const DATECOLS=new Set(['juchuDate','juchuMonth','kenshuDate','kenshuMonth','sfUpdated','importedAt','month','at','todoDue','createdAt','doneAt','updatedAt','due','date']);
 const WRITES=[];
 function makeSheet(name,rows){
-  return {
-    _name:name,_rows:rows,
-    getName(){return name;},
-    getLastRow(){return rows.length;},
-    getLastColumn(){return rows.length?rows[0].length:0;},
-    getRange(r,c,nr,nc){
-      return {
-        getValues(){const o=[];for(let i=0;i<(nr||1);i++){const src=rows[r-1+i]||[];const line=[];
-          for(let j=0;j<(nc||1);j++)line.push(src[c-1+j]===undefined?'':src[c-1+j]);o.push(line);}return o;},
-        setValue(v){WRITES.push({sheet:name,row:r,col:c,value:v});},
-        setValues(v){WRITES.push({sheet:name,row:r,col:c,n:v.length});},
-        setFontWeight(){return this;},
-      };
-    },
-    clear(){}, setFrozenRows(){}, autoResizeColumn(){},
-  };
+ return {getName:()=>name,getLastRow:()=>rows.length,getLastColumn:()=>rows.length?rows[0].length:0,
+  _rows:rows,
+  getRange(r,c,nr,nc){const self=this;return{
+    getValues(){const o=[];for(let i=0;i<(nr||1);i++){const src=rows[r-1+i]||[],l=[];
+      for(let j=0;j<(nc||1);j++){let v=src[c-1+j];if(v===undefined)v='';l.push(v);}o.push(l);}return o;},
+    setValue(v){WRITES.push({t:'cell',sheet:name,row:r,col:c,v});while(rows.length<r)rows.push([]);rows[r-1][c-1]=v;return this;},
+    setValues(v){WRITES.push({t:'bulk',sheet:name,row:r,col:c,n:v.length});
+      for(let i=0;i<v.length;i++){while(rows.length<r+i)rows.push([]);rows[r-1+i][c-1]=v[i][0];}return this;},
+    setNumberFormat(f){WRITES.push({t:'fmt',sheet:name,col:c,f});return this;},
+    setFontWeight(){return this;},
+  };},
+  clear(){},setFrozenRows(){},autoResizeColumn(){}};
 }
-
-// --- GAS stubs -------------------------------------------------------------
+const order=['取込_案件','休み','挽回コミット','活動種別','プラン計画','行動ログ','フリーTODO','月別目標','行動履歴','行動履歴_月次','月次','取込_TODO','朝礼ログ','終礼ログ','TODOログ','指示','指示回答','アクションプラン','メンバー','設定','監査ログ','内部状態'];
+const sheets=[];
+for(const nm of order){
+  const p='sheets/'+nm+'.csv'; if(!fs.existsSync(p)) continue;
+  const rows=parseCSV(fs.readFileSync(p,'utf8')).filter(r=>r.length>1||r[0]!=='');
+  const hdr=rows[0]||[];
+  for(let i=1;i<rows.length;i++) for(let j=0;j<hdr.length;j++){
+    const v=rows[i][j];
+    if(typeof v==='string'&&DATEISH.test(v)&&DATECOLS.has(hdr[j])) rows[i][j]=new Date(v.replace(' ','T'));
+  }
+  sheets.push(makeSheet(nm,rows));
+}
 global.Logger={_l:[],log(s){this._l.push(String(s));}};
-global.Utilities={formatDate(d,tz,fmt){
-  const p=n=>String(n).padStart(2,'0');
-  return fmt.replace('yyyy',d.getFullYear()).replace('MM',p(d.getMonth()+1))
-            .replace('dd',p(d.getDate())).replace('HH',p(d.getHours())).replace('mm',p(d.getMinutes()));
-}};
-const fakeSS={getSheets:()=>sheets,getSheetByName:n=>sheets.find(s=>s.getName()===n)||null,
-  insertSheet(n){const s=makeSheet(n,[]);sheets.push(s);return s;}};
-global.SpreadsheetApp={openById:()=>fakeSS,flush(){}};
-global.DriveApp={getFileById:()=>({makeCopy:()=>({getUrl:()=>'(dry)'})})};
-
-// --- load ------------------------------------------------------------------
+global.Utilities={formatDate(d,tz,fmt){const p=n=>String(n).padStart(2,'0');
+ return fmt.replace('yyyy',d.getFullYear()).replace('MM',p(d.getMonth()+1)).replace('dd',p(d.getDate()))
+           .replace('HH',p(d.getHours())).replace('mm',p(d.getMinutes())).replace('ss',p(d.getSeconds()));}};
+const ss={getSheets:()=>sheets,getSheetByName:n=>sheets.find(s=>s.getName()===n)||null,
+ insertSheet(n){const s=makeSheet(n,[]);sheets.push(s);return s;}};
+global.SpreadsheetApp={openById:()=>ss,flush(){}};
+global.DriveApp={getFileById:()=>({makeCopy:()=>({getUrl:()=>'(test)'})})};
 eval(fs.readFileSync('ChoreiFix.js','utf8'));
 eval(fs.readFileSync('ChoreiAgg.js','utf8'));
 
 console.log('===== 診断() =====');
-const rep=runDiagnostics_();
-for(const r of rep) console.log(r.map(x=>String(x)).join(' | '));
-
+for(const r of runDiagnostics_()) console.log(r.map(String).join(' | '));
 console.log('\n===== 修復_ドライラン() =====');
-const plan=buildRepairPlan_();
-logPlan_(plan,true);
-console.log(Logger._l.join('\n'));
-console.log('\n書き込み回数(実行されていないこと):',WRITES.length);
+const plan=buildRepairPlan_(); logPlan_(plan,true);
+console.log(Logger._l.join('\n')); Logger._l=[];
+console.log('ドライラン中の書き込み:',WRITES.length,'(0であること)');
+module.exports={sheets,plan,WRITES};
 
-console.log('\n===== 集計_月次見込み("2026-09") =====');
-const res=集計_月次見込み('2026-09');
-for(const m of res.members){
-  if(!m.juchu.count && !m.keijo.count && m.targetJuchu===null) continue;
-  console.log(`${m.name}\t受注 ${m.juchu.total.toLocaleString()} (加重 ${Math.round(m.juchu.weighted).toLocaleString()}) 目標 ${tgt_(m.targetJuchu)} ${pct_(m.rateJuchu)}\t計上 ${m.keijo.total.toLocaleString()} 目標 ${tgt_(m.targetKeijo)} ${pct_(m.rateKeijo)}`);
-}
-console.log('未分類の進捗:',res.unknownStages);
-console.log('担当不明の案件:',res.orphans);
-console.log('\n--- 検証: 集計後の合計 ---');
-const tj=res.members.reduce((s,m)=>s+m.juchu.total,0);
-const tk=res.members.reduce((s,m)=>s+m.keijo.total,0);
-console.log('受注見込み合計',tj.toLocaleString(),'/ 計上見込み合計',tk.toLocaleString());
-
-console.log('\n===== メンバー追加候補() =====');
-Logger._l=[];
-メンバー追加候補();
-console.log(Logger._l.join('\n'));
-
-// ===== 回帰テスト: 修復を適用してから再診断 =====
 console.log('\n===== 回帰テスト =====');
-// 1) members に吉牟田・小菅を追加（メンバー追加候補() の出力どおり）
-const msh=sheets.find(s=>s.getName()==='members');
-msh._rows.push(['yoshimuta','吉牟田','吉牟田 淳嗣','','','member','TRUE','FALSE','0','0','','mse']);
-msh._rows.push(['kosuge','小菅','小菅 遥平','','','member','TRUE','FALSE','0','0','','mse']);
+const msh=sheets.find(s=>s.getName()==='メンバー');
+[['yoshimuta','吉牟田','吉牟田 淳嗣','','U02693MDCQN','member','TRUE','TRUE',0,0,'','mse'],
+ ['kosuge','小菅','小菅 遥平','','U0A6KNQK7JP','member','TRUE','TRUE',0,0,'','mse'],
+ ['shigematsu','重松','重松 篤弘','','','member','FALSE','FALSE',0,0,'','mse'],
+ ['tsurukawa','鶴川','鶴川 大介','','','member','FALSE','FALSE',0,0,'','mse'],
+ ['tsujii','辻井','辻井 利由貴','','','member','FALSE','FALSE',0,0,'','mse'],
+ ['takemotoy','竹本佳','竹本 佳和','','','member','FALSE','FALSE',0,0,'','mse'],
+].forEach(r=>msh._rows.push(r));
 
-// 2) 修復を実際に適用（setValue をシートに反映するよう差し替え）
-for(const s of sheets){
-  const orig=s.getRange.bind(s);
-  s.getRange=(r,c,nr,nc)=>{const g=orig(r,c,nr,nc);const sv=g.setValue.bind(g);
-    g.setValue=v=>{while(s._rows.length<r)s._rows.push([]);s._rows[r-1][c-1]=v;return g;};return g;};
-}
-const plan2=buildRepairPlan_();
-console.log('適用するセル数:',plan2.total);
-applyRepairPlan_(plan2);
+const p2=buildRepairPlan_();
+console.log('適用: 列一括',(p2.columnWrites||[]).length,'/ セル',p2.edits.length,'/ 合計',p2.total);
+applyRepairPlan_(p2);
+const fmts=WRITES.filter(w=>w.t==='fmt');
+console.log('setNumberFormat 呼び出し:',fmts.length,'→',fmts.map(f=>'第'+f.col+'列='+f.f).join(' '));
+console.log('setValues(一括) 呼び出し:',WRITES.filter(w=>w.t==='bulk').length);
 
-// 3) 再診断
-const rep2=runDiagnostics_();
-for(const r of rep2.slice(1)) if(/月キー|名寄せ/.test(r[0])) console.log('  ',r[0],'|',r[1],'|',r[2],'|',r[3]);
-const plan3=buildRepairPlan_();
-console.log('再実行で残る書き換え:',plan3.total,'(0なら冪等)');
+for(const r of runDiagnostics_()) if(/名寄せ|月キー/.test(r[0])) console.log('  ',r[0],'|',r[1],'|',r[2]);
+const p3=buildRepairPlan_();
+console.log('再実行で残る書き換え:',p3.total,'(0なら冪等)');
 
-// 4) 再集計
-const res2=集計_月次見込み('2026-09');
-console.log('2026-09 受注見込み合計:',res2.members.reduce((s,m)=>s+m.juchu.total,0).toLocaleString());
-console.log('2026-09 計上見込み合計:',res2.members.reduce((s,m)=>s+m.keijo.total,0).toLocaleString());
-console.log('担当不明の案件:',res2.orphans.length);
-const y=res2.members.find(m=>m.id==='yoshimuta');
-console.log('吉牟田が集計対象に入ったか:', y? 'yes (受注'+y.juchu.total+')':'no');
-const resNov=集計_月次見込み('2026-11');
-const y11=resNov.members.find(m=>m.id==='yoshimuta');
-console.log('2026-11 吉牟田 受注見込み:', y11 ? y11.juchu.total.toLocaleString() : '—', '(修復前は担当不明で0だった)');
+console.log('\n--- 2026-09 集計（ロスト含む全件／修復後）---');
+const res=集計_月次見込み('2026-09');
+let tj=0,tk=0;
+for(const m of res.members){ tj+=m.juchu.total; tk+=m.keijo.total;
+  if(m.juchu.count||m.keijo.count) console.log(`  ${m.name}\t受注 ${m.juchu.total.toLocaleString()} (加重 ${Math.round(m.juchu.weighted).toLocaleString()})\t計上 ${m.keijo.total.toLocaleString()}\t目標 ${tgt_(m.targetJuchu)}/${tgt_(m.targetKeijo)}`);}
+console.log('  合計 受注',tj.toLocaleString(),'/ 計上',tk.toLocaleString());
+console.log('  担当不明:',res.orphans.length,'/ 未分類の進捗:',JSON.stringify(res.unknownStages));

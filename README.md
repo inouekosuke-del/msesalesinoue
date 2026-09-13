@@ -27,7 +27,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
-| [`docs/chorei-board-audit-2026-09-11.md`](docs/chorei-board-audit-2026-09-11.md) | 朝礼ボードの集計不具合の調査。実データ検算つき |
+| [`docs/chorei-board-audit-2026-09-13.md`](docs/chorei-board-audit-2026-09-13.md) | 朝礼ボードの集計不具合の調査（全データ版）。9/11版を置き換える |
 
 ## 使い方
 
@@ -43,12 +43,13 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 
 台帳を作っただけでは直らないもの。優先順：
 
-0. **朝礼ボードの集計が実態と合っていない** — 取り込み元が計上予定レポートで、
-   確度A/C/C+の見込み案件が1件も入っていない（生きている見込みは6件・403万円のみ）。
-   加えて担当者マスタ未登録の3名（吉牟田・小菅・重松）の数字が全部落ちている。
-   調査結果と修正順 → [`docs/chorei-board-audit-2026-09-11.md`](docs/chorei-board-audit-2026-09-11.md)。
-   データ側は [`apps/chorei-board-fix/`](apps/chorei-board-fix/) を貼れば直せる（診断→修復、バックアップ付き）。
-   取り込み元のSFレポートとUI2件は、朝礼ボードのGASソースが無いと直せない（同ドキュメント末尾の手順、5分）
+0. **朝礼ボードの集計が実態と合っていない** — 9/10〜9/12 の3日間、同じレポートを
+   1日に2回取り込んで**案件数が倍**になっていた（監査ログ `files=2 deals=9422`）。
+   加えて月キーの列が日付型に変換されていて月次の絞り込みが効かず、
+   担当者マスタ未登録の6名ぶん**1億1,906万円**が集計から落ちている。
+   調査結果 → [`docs/chorei-board-audit-2026-09-13.md`](docs/chorei-board-audit-2026-09-13.md)。
+   月キーと名寄せは [`apps/chorei-board-fix/`](apps/chorei-board-fix/) で直せる。
+   二重取り込みとUI2件は、朝礼ボードのGASソースが無いと直せない
 1. **GASソースの Git 取り込み** — 現状バックアップ皆無で、消えたら復旧不能。
    Drive API では取得できずリモートから実行できないため、
    [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) をローカルで実行する（10〜15分）。
