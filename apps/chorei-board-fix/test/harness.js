@@ -17,11 +17,14 @@ function makeSheet(name,rows){
       for(let j=0;j<(nc||1);j++){let v=src[c-1+j];if(v===undefined)v='';l.push(v);}o.push(l);}return o;},
     setValue(v){WRITES.push({t:'cell',sheet:name,row:r,col:c,v});while(rows.length<r)rows.push([]);rows[r-1][c-1]=v;return this;},
     setValues(v){WRITES.push({t:'bulk',sheet:name,row:r,col:c,n:v.length});
-      for(let i=0;i<v.length;i++){while(rows.length<r+i)rows.push([]);rows[r-1+i][c-1]=v[i][0];}return this;},
+      for(let i=0;i<v.length;i++){while(rows.length<r+i)rows.push([]);
+        for(let j=0;j<v[i].length;j++)rows[r-1+i][c-1+j]=v[i][j];}return this;},
     setNumberFormat(f){WRITES.push({t:'fmt',sheet:name,col:c,f});return this;},
     setFontWeight(){return this;},
   };},
-  clear(){},setFrozenRows(){},autoResizeColumn(){}};
+  clear(){},setFrozenRows(){},autoResizeColumn(){},
+  getMaxRows(){return Math.max(rows.length,1);},
+  appendRow(v){rows.push(v.map(x=>x===undefined?'':x));WRITES.push({t:'append',sheet:name,n:v.length});}};
 }
 const order=['取込_案件','休み','挽回コミット','活動種別','プラン計画','行動ログ','フリーTODO','月別目標','行動履歴','行動履歴_月次','月次','取込_TODO','朝礼ログ','終礼ログ','TODOログ','指示','指示回答','アクションプラン','メンバー','設定','監査ログ','内部状態'];
 const sheets=[];
@@ -37,14 +40,21 @@ for(const nm of order){
 }
 global.Logger={_l:[],log(s){this._l.push(String(s));}};
 global.Utilities={formatDate(d,tz,fmt){const p=n=>String(n).padStart(2,'0');
- return fmt.replace('yyyy',d.getFullYear()).replace('MM',p(d.getMonth()+1)).replace('dd',p(d.getDate()))
-           .replace('HH',p(d.getHours())).replace('mm',p(d.getMinutes())).replace('ss',p(d.getSeconds()));}};
+ // SimpleDateFormat 相当。長いパターンから順に置換する（MM を M より先に）
+ return fmt.replace(/yyyy|MM|dd|HH|mm|ss|M|d|H/g,t=>({
+   yyyy:d.getFullYear(), MM:p(d.getMonth()+1), dd:p(d.getDate()),
+   HH:p(d.getHours()), mm:p(d.getMinutes()), ss:p(d.getSeconds()),
+   M:d.getMonth()+1, d:d.getDate(), H:d.getHours()}[t]));}};
 const ss={getSheets:()=>sheets,getSheetByName:n=>sheets.find(s=>s.getName()===n)||null,
  insertSheet(n){const s=makeSheet(n,[]);sheets.push(s);return s;}};
 global.SpreadsheetApp={openById:()=>ss,flush(){}};
+global.Utilities.getUuid=()=>'abcd1234efgh';
+global.Session={getActiveUser:()=>({getEmail:()=>'inoue.kosuke@makeshop.co.jp'})};
 global.DriveApp={getFileById:()=>({makeCopy:()=>({getUrl:()=>'(test)'})})};
 eval(fs.readFileSync('ChoreiFix.js','utf8'));
 eval(fs.readFileSync('ChoreiAgg.js','utf8'));
+eval(fs.readFileSync('ChoreiPick.js','utf8'));
+eval(fs.readFileSync('ChoreiOrder.js','utf8'));
 
 console.log('===== 診断() =====');
 for(const r of runDiagnostics_()) console.log(r.map(String).join(' | '));
@@ -85,3 +95,40 @@ console.log('  担当不明:',res.orphans.length,'/ 未分類の進捗:',JSON.st
 
 console.log('\n===== 二重取り込みチェック() =====');
 Logger._l=[]; 二重取り込みチェック(); console.log(Logger._l.join('\n'));
+
+console.log('\n===== 候補ノイズ診断() =====');
+Logger._l=[]; 候補ノイズ診断(); console.log(Logger._l.join('\n'));
+console.log('\n植松の候補 上位8件:');
+for(const d of 案件候補('uematsu').slice(0,8))
+  console.log(`  ${d.stage}\t${d.amount.toLocaleString().padStart(11)}\t${d.juchuDate}\t${d.company.slice(0,24)}`);
+console.log('  植松の候補 合計:',案件候補('uematsu').length,'件');
+
+console.log('\n===== 指示_列を追加 =====');
+Logger._l=[]; 指示_列を追加_ドライラン(); 指示_列を追加_実行(); console.log(Logger._l.join('\n'));
+
+console.log('\n===== 指示を出す（検証）=====');
+const NG=[
+  {label:'施策が存在しない', o:{scope:'one',targetId:'uematsu',actionId:'nosuch',targetRef:'代理店リスト',count:5,due:'2026-09-20 18:00'}},
+  {label:'件数が0',        o:{scope:'one',targetId:'uematsu',actionId:'partner',targetRef:'代理店リスト',count:0,due:'2026-09-20 18:00'}},
+  {label:'期限が過去',      o:{scope:'one',targetId:'uematsu',actionId:'partner',targetRef:'代理店リスト',count:5,due:'2026-09-01 18:00'}},
+  {label:'担当が居ない',    o:{scope:'one',targetId:'dareka',actionId:'partner',targetRef:'代理店リスト',count:5,due:'2026-09-20 18:00'}},
+  {label:'対象が空',        o:{scope:'one',targetId:'uematsu',actionId:'partner',targetRef:'',count:5,due:'2026-09-20 18:00'}},
+];
+for(const t of NG) console.log(`  ${t.label}: ${指示を検証(t.o).join(' / ')}`);
+
+const ok={scope:'one',targetId:'uematsu',actionId:'partner',targetKind:'list',targetRef:'代理店リスト',count:5,due:'2026-09-20 18:00',must:true};
+console.log('  正常:',指示を検証(ok).length===0?'エラーなし':指示を検証(ok));
+console.log('  文面:',指示の文面(ok));
+Logger._l=[]; 指示を出す(ok); console.log(' ',Logger._l.join('\n'));
+
+console.log('\n===== 指示の消化状況() =====');
+for(const r of 指示の消化状況().slice(0,6))
+  console.log(`  [${r.期限切れ?'期限切れ':'　　　　'}]${r.must?'[必達]':'      '} ${r.who}\t${r.done}/${r.count}\t~${r.due}\t${r.what.slice(0,42)}`);
+
+console.log('\n===== 指示の完了 =====');
+Logger._l=[]; 指示_完了済みを片付ける_ドライラン(); console.log(Logger._l.join('\n'));
+Logger._l=[]; 指示_完了済みを片付ける_実行(); console.log(Logger._l.slice(-2).join('\n'));
+Logger._l=[]; 指示を完了にする('abcd1234','井上'); console.log(Logger._l.join('\n'));
+console.log('片付け後に残る指示:', 指示の消化状況().length,'件');
+for(const r of 指示の消化状況()) console.log('  ',r.who,r.what.slice(0,36));
+Logger._l=[]; 指示_完了済みを片付ける_ドライラン(); console.log(Logger._l[0],'(0件なら冪等)');

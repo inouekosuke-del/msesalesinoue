@@ -18,8 +18,7 @@ Google Drive の `read_file_content` のような「自然文表現」は
 cd apps/chorei-board-fix/test
 pip install openpyxl
 python3 export.py        # 各シートを sheets/<シート名>.csv に書き出す
-cp ../ChoreiFix.gs ChoreiFix.js
-cp ../ChoreiAgg.gs ChoreiAgg.js
+for f in ChoreiFix ChoreiAgg ChoreiPick ChoreiOrder; do cp ../$f.gs $f.js; done
 node harness.js
 ```
 
