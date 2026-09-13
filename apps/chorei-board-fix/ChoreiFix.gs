@@ -95,9 +95,12 @@ function runDiagnostics_() {
       });
       if (Object.keys(sigs).length === 1) exactDup += g.length - 1; else keyClash++;
     });
-    rows.push(['1 取り込み', '中身まで同一の重複行（二重取り込みの残骸）',
-      exactDup, exactDup ? '同じレポートを2回処理した可能性' : '—',
-      exactDup ? '取り込みを全消し→全書き込みにするか、書き込み前に重複を落とす' : 'OK']);
+    // 注意: SFレポートは商談商品の明細単位なので、同じ商品が2明細あると
+    // 全列一致の行が正当に発生しうる。件数が小さいうちは消さずに報告だけする。
+    rows.push(['1 取り込み', '全列が一致する重複行',
+      exactDup, exactDup > 20 ? '二重取り込みの残骸の可能性が高い'
+                              : '少数ならSF側の明細重複かもしれない。消す前に中身を見ること',
+      exactDup > 20 ? '取り込みを1回やり直す' : 'OK']);
 
     // 監査ログの ingest 行から files=2 の日を拾う
     var log = readTable_(ss, ['at', 'email', 'action', 'detail']);
@@ -112,7 +115,7 @@ function runDiagnostics_() {
       });
       rows.push(['1 取り込み', '1回の取り込みで2ファイル以上を処理した日',
         multi.length, multi.slice(-6).join(' ') || '—',
-        multi.length ? 'その日の数字は倍になっている可能性がある。取り込み側の修正が必要' : 'OK']);
+        multi.length ? '夕方の取り込みが18:00のメール着信と競合している。トリガーを18:10以降にずらす' : 'OK']);
     }
   }
 
@@ -407,6 +410,57 @@ function logPlan_(plan, isDryRun) {
 
 
 /**
+ * 今日の数字が二重取り込みの影響を受けていないかを判定する。
+ *
+ * 仕組み: 夕方のレポートメールは 18:00:0x〜18:00:4x に届く。取り込みトリガーが
+ * 18:00:2x に走ると取りこぼし、翌朝 07:30 の回が「昨夕」と「今朝」の2通を
+ * まとめて処理して件数が倍になる。
+ *
+ * 朝礼の前にこれを実行して「要注意」が出たら、その日の見込みは信用しない。
+ */
+function 二重取り込みチェック() {
+  var ss = SpreadsheetApp.openById(DATA_SS_ID);
+  var log = readTable_(ss, ['at', 'email', 'action', 'detail']);
+  if (!log) { Logger.log('監査ログが見つかりません'); return null; }
+
+  var last = null;
+  log.rows.forEach(function (r) {
+    if (String(r.action).indexOf('ingest') !== 0) return;
+    var m = String(r.detail).match(/files=(\d+)\s+deals=(\d+)\s+todos=(\d+)/);
+    if (m) last = { at: r.at, files: +m[1], deals: +m[2], todos: +m[3] };
+  });
+  if (!last) { Logger.log('取り込みの記録がありません'); return null; }
+
+  // 実際のシートも見る。lineId は別案件どうしで衝突しうるので（不具合4）、
+  // ユニーク数との差では判定できない。「全列が一致する行」の数で見る。
+  var deals = readTable_(ss, ['lineId', 'juchuMonth', 'kenshuMonth', 'side']);
+  var rowCount = deals ? deals.rows.length : 0;
+  var seen = {}, exactDup = 0;
+  if (deals) {
+    deals.rows.forEach(function (r) {
+      var sig = deals.header.map(function (h) {
+        return (h === 'importedAt') ? '' : String(r[h]);   // 取込時刻は比較から除く
+      }).join('\u0001');
+      if (seen[sig]) exactDup++; else seen[sig] = 1;
+    });
+  }
+
+  var ng = (last.files > 1) || (exactDup > 20);
+  Logger.log('最終取り込み: ' + safeDate_(last.at, 'yyyy-MM-dd HH:mm') +
+             ' / files=' + last.files + ' deals=' + last.deals);
+  Logger.log('シート実測: ' + rowCount + '行 / 全列一致の重複 ' + exactDup + '行');
+  if (ng) {
+    Logger.log('■ 要注意: 二重取り込みの疑いがある。今日の見込み数字は使わないこと。');
+    Logger.log('  対処: 取り込みを1回やり直す（1通だけ処理される状態にしてから）');
+    Logger.log('  恒久対策: 夕方の取り込みトリガーを 18:00 から 18:10 以降にずらす');
+  } else {
+    Logger.log('○ 問題なし。');
+  }
+  return { ok: !ng, last: last, rowCount: rowCount, exactDup: exactDup };
+}
+
+
+/**
  * 名寄せできなかった担当を、members シートに貼れる形で出力する。
  * id の候補は既存の命名（個人チェックシートのキー）に合わせた辞書から引く。
  */
@@ -475,8 +529,9 @@ function toDate_(val) {
     if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
     var s = String(val).trim();
     if (!s) return null;
-    var m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    // 日付だけでなく時刻も拾う。時刻を落とすと updatedAt などが 00:00 になる。
+    var m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
     var d = new Date(s.replace(/-/g, '/'));
     return isNaN(d.getTime()) ? null : d;
   } catch (e) { return null; }

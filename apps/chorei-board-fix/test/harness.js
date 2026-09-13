@@ -82,3 +82,6 @@ for(const m of res.members){ tj+=m.juchu.total; tk+=m.keijo.total;
   if(m.juchu.count||m.keijo.count) console.log(`  ${m.name}\t受注 ${m.juchu.total.toLocaleString()} (加重 ${Math.round(m.juchu.weighted).toLocaleString()})\t計上 ${m.keijo.total.toLocaleString()}\t目標 ${tgt_(m.targetJuchu)}/${tgt_(m.targetKeijo)}`);}
 console.log('  合計 受注',tj.toLocaleString(),'/ 計上',tk.toLocaleString());
 console.log('  担当不明:',res.orphans.length,'/ 未分類の進捗:',JSON.stringify(res.unknownStages));
+
+console.log('\n===== 二重取り込みチェック() =====');
+Logger._l=[]; 二重取り込みチェック(); console.log(Logger._l.join('\n'));
