@@ -25,6 +25,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`registry/apps.yaml`](registry/apps.yaml) | アプリ／GAS台帳（9件） |
 | [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) | GASソースをGit管理下に置く手順（ローカル実行） |
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
+| [`skills/`](skills/) | スキルのソース。Git管理下に置いた分のみ（現在 `slack-unreplied` の1件） |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
 
@@ -53,3 +54,5 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 6. **【井上】個人チェックシート2026 の鮮度確認** — 突合の入力として妥当か
 7. **用途不明GAS3件の判断** — 「無題のプロジェクト」。命名するか削除するか
 8. **calendar-add-v2 / makeshop-design-guidelines の廃止判断** — 後継と併存している
+9. **残り28スキルのGit取り込み** — `slack-unreplied` だけが `skills/` 配下にソースを持つ。
+   他は `~/.claude/skills/synced/` にしか無く、GASと同じ「消えたら復旧不能」の状態のまま

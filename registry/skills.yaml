@@ -159,3 +159,14 @@ skills:
     role: 他AIのメモリエクスポート取り込み
     ref_style: none
     vendor: anthropic
+
+  # ===== 業務オペレーション（Slack）=====
+  - name: slack-unreplied
+    role: 自分がSlackで送って返信が返っていないメッセージの一覧化（直近3日・全チャンネル/DM/スレッド）
+    reads: []
+    ref_style: none
+    risk: low
+    source: skills/slack-unreplied/SKILL.md   # 本リポジトリで版管理している唯一のスキル
+    note: 外部データソースを読まずSlack MCPのみを使う。定数（自分のuser_id U06RQRBKM0F /
+      結果の投稿先DM D06S2EVR5GV）はSKILL.md内に保持。毎日15:00・18:00 JST のRoutineから自動実行し、
+      未返信0件のときは投稿しない。
