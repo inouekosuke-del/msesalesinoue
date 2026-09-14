@@ -127,6 +127,53 @@
     return true;
   };
 
+  // =======================================================================
+  // 4. 指示を出す先を 全員 / チーム / 個人 から選べるようにする
+  // =======================================================================
+  //
+  // いまの画面は「全員」と「個人」しか無い。チームを足す。
+  // チーム名はメンバーシートの team 列から作るので、画面には直書きしない。
+  //
+  //   指示フォームを配線('#scope', '#target');
+  //
+  // scope が 'all' のときは対象の選択を伏せ、'team' ならチーム一覧、
+  // 'one' ならメンバー一覧を入れる。
+
+  window.指示フォームを配線 = function (scopeSel, targetSel) {
+    var scope = (typeof scopeSel === 'string') ? document.querySelector(scopeSel) : scopeSel;
+    var target = (typeof targetSel === 'string') ? document.querySelector(targetSel) : targetSel;
+    if (!scope || !target) {
+      if (window.console) console.warn('[朝礼ボード] 指示フォームの要素が見つかりません');
+      return;
+    }
+
+    function 入れる(sel, items, 先頭) {
+      sel.innerHTML = '';
+      if (先頭) sel.appendChild(new Option(先頭, ''));
+      items.forEach(function (o) { sel.appendChild(new Option(o.label, o.value)); });
+    }
+
+    google.script.run.withSuccessHandler(function (opt) {
+      入れる(scope, opt.scopes);
+
+      function 切り替え() {
+        var v = scope.value;
+        if (v === 'all') {
+          入れる(target, []);
+          target.disabled = true;          // 全員なら対象を選ばせない
+        } else {
+          target.disabled = false;
+          入れる(target, v === 'team' ? opt.teams : opt.members, '選択してください');
+        }
+      }
+      scope.addEventListener('change', 切り替え);
+      切り替え();
+    }).withFailureHandler(function (e) {
+      if (window.console) console.error('[朝礼ボード] 選択肢を取れません', e);
+    }).指示フォームの選択肢();
+  };
+
+
   /**
    * 完了ボタンから呼ぶ。サーバの書き込みが終わってから一覧を作り直す。
    *

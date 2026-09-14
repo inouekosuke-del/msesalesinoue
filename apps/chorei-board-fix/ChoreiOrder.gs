@@ -223,6 +223,40 @@ function 宛先の表示(o) {
 
 
 /**
+ * 指示を出す画面のプルダウンに入れる選択肢を返す。
+ *
+ * 画面側は `指示フォームを配線()`（ChoreiClient.html）からこれを呼ぶ。
+ * チーム名も人数もメンバーシートから作るので、増減してもコードを触らなくてよい。
+ *
+ * @return {{scopes: Object[], teams: Object[], members: Object[]}}
+ */
+function 指示フォームの選択肢() {
+  var members = readTable_(SpreadsheetApp.openById(DATA_SS_ID), ['id', 'sfName', 'slackId']);
+  var live = members ? 活動中のメンバー_(members) : [];
+
+  var 人数 = {};
+  live.forEach(function (m) {
+    var t = String(m.team || '').trim();
+    if (t) 人数[t] = (人数[t] || 0) + 1;
+  });
+
+  return {
+    scopes: [
+      { value: 'all',  label: '全員（' + live.length + '名）' },
+      { value: 'team', label: 'チーム' },
+      { value: 'one',  label: '個人' }
+    ],
+    teams: Object.keys(人数).sort().map(function (t) {
+      return { value: t, label: t + 'チーム（' + 人数[t] + '名）' };
+    }),
+    members: live.map(function (m) {
+      return { value: String(m.id), label: String(m.name || m.id) + '（' + String(m.team || '') + '）' };
+    })
+  };
+}
+
+
+/**
  * 指示の消化状況を一覧する。上長が朝礼で見るための表。
  * @param {string=} memberId 省略で全員
  */
