@@ -27,6 +27,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
 | [`docs/sf-daily-diff-design.md`](docs/sf-daily-diff-design.md) | Salesforce日次差分・活動量可視化の設計メモ（既存パイプラインの調査結果つき） |
+| [`docs/sf-report-spec.md`](docs/sf-report-spec.md) | 日次差分・活動量可視化用に新規作成するSFレポートの項目仕様 |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
 
 ## 使い方
@@ -56,7 +57,10 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 6. **【井上】個人チェックシート2026 の鮮度確認** — 突合の入力として妥当か
 7. **用途不明GAS3件の判断** — 「無題のプロジェクト」。命名するか削除するか
 8. **calendar-add-v2 / makeshop-design-guidelines の廃止判断** — 後継と併存している
-9. **SFレポートへの列追加** — 「GAS朝礼用MSE　全案件2026年受注」に 商談ID(18桁) /
-   商談商品ID / 最終活動日 を追加する。現状 lineId に金額が含まれるため金額変更で
-   差分追跡が切れ、最終活動日がないため活動量を測れない
-   → [`docs/sf-daily-diff-design.md`](docs/sf-daily-diff-design.md)
+9. **日次差分用SFレポートの新規作成** — 商談レベル／商談商品レベルの2本立て。
+   項目定義は [`docs/sf-report-spec.md`](docs/sf-report-spec.md)。
+   現行レポートは lineId に金額が含まれるため金額変更で差分追跡が切れ、
+   最終活動日がないため活動量を測れない
+10. **現行レポートの行数上限の確認** — 「GAS朝礼用MSE　全案件2026年受注」は
+   合計2,390レコードに対しSFの表示上限が2,000行。毎日約390行を取りこぼしている
+   可能性がある → [`docs/sf-report-spec.md`](docs/sf-report-spec.md)
