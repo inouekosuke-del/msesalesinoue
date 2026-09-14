@@ -27,6 +27,7 @@ apps:
     last_modified: 2026-09-10
     status: unknown
     source_backed_up: false
+    notes: SFレポートメール取り込みGASの候補。ただし未確認（ソースが読めないため特定できていない）。
 
   - key: gyoseki_bunseki_mse
     name: 業績分析　MSE
@@ -88,6 +89,10 @@ apps:
     name: MSE朝礼ボード
     type: spreadsheet_app
     data_sources: [chorei_board_data]
-    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース
+    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース（現在空）
     status: active
     source_backed_up: false
+    notes: 毎日SalesforceのレポートメールをGmailから取り込み、chorei_board_data の
+      取込_案件 タブへ書き込むパイプラインが稼働中。取り込みメールには Gmail ラベル
+      「MSE朝礼/取込済」が付与される。**取り込み処理を行っているGASの実体が未特定**で、
+      ソースも取得できていないため改修に着手できない。docs/sf-daily-diff-design.md 参照。

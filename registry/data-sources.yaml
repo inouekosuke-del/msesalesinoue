@@ -143,11 +143,25 @@ sources:
     id: 18FYRRykL5krlrZe3Sq4hJtl7ZIAUsoX4AxS9RX6QyOU
     location: マイドライブ直下  # 要移設
     owner: inoue.kosuke@makeshop.co.jp
-    role: 朝礼ボードのデータ層
-    last_modified: 2026-09-10
+    role: 朝礼ボードのデータ層。SFレポートメールの取り込み先
+    last_modified: 2026-09-14
     status: active
     consumed_by: []
-    related: [MSE朝礼ボード_ソース（フォルダ 1hVnWNMttCtTdvkplcconwtcENYcgI-MS）]
+    related: [MSE朝礼ボード_ソース（フォルダ 1hVnWNMttCtTdvkplcconwtcENYcgI-MS。現在空）]
+    fed_by: [sf_report_mail_juchu]      # 何らかのGASが毎朝取り込んでいる。実体は未特定
+    sheets:
+      取込_案件:
+        columns: [lineId, oppId, title, company, product, catLarge, amount, profit,
+                  juchuDate, juchuMonth, kenshuDate, kenshuMonth, ownerName, ownerId,
+                  stage, prob, sfUpdated, side, importedAt]
+        notes: >-
+          side は 受注/計上 の2系統（計上側は lineId 末尾に "#K"）。
+          sfUpdated はSFレコード最終更新日で、2週間停滞案件の判定に使える。
+          lineId が「社名|商品名|金額」構成のため、金額変更で別レコード扱いになる（差分追跡不可）。
+          oppId は18桁IDではなく商談名。
+        issue: >-
+          全行の importedAt が同一値であることから毎朝の全置換と見られ、履歴が残らない。
+          日次差分には履歴層が必要。詳細は docs/sf-daily-diff-design.md
 
   - key: chohyo_app_data
     name: MSE帳票アプリ
@@ -223,3 +237,31 @@ sources:
     role: 次回TODOの期日管理
     status: active
     consumed_by: [alert-overdue-mse]
+
+  # ---------- Salesforce レポート購読メール（Gmail） ----------
+  # SFからGmailへ毎日届く「レポート結果 (…)」メール。既存の取り込みパイプラインの入口。
+  # 調査記録と設計は docs/sf-daily-diff-design.md
+  - key: sf_report_mail_juchu
+    name: "レポート結果 (GAS朝礼用MSE　全案件2026年受注 / 同 夕)"
+    type: salesforce_report_mail
+    recipient: inoue.kosuke@makeshop.co.jp
+    schedule: 朝 05:00 JST / 夕 18:00 JST（毎日）
+    record_count: 約2,390（商談商品行レベル）
+    gmail_label: MSE朝礼/取込済   # Label_1。取り込み済みの印として何らかのGASが付与
+    role: 朝礼ボードの案件データ源。日次差分の入力候補
+    status: active
+    consumed_by: []              # 取り込んでいるGASが未特定
+    notes: 過去メールがGmailに残っているため、履歴層を作らなくても任意の2時点で差分を算出できる。
+    action_required: レポートに 商談ID(18桁) / 商談商品ID / 最終活動日 の3列を追加する。
+      ID列がないと金額変更時に差分追跡が切れ、最終活動日がないと活動量を測れない。
+
+  - key: sf_report_mail_shohin
+    name: "レポート結果 (GAS用_mse商品分析)"
+    type: salesforce_report_mail
+    recipient: inoue.kosuke@makeshop.co.jp
+    schedule: 06:00 JST（毎日）
+    record_count: 約443
+    role: 商品分析。用途未記録
+    status: active
+    consumed_by: []
+    notes: 取込済ラベルが付いていない。取り込まれているか要確認。

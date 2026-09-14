@@ -26,6 +26,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) | GASソースをGit管理下に置く手順（ローカル実行） |
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
+| [`docs/sf-daily-diff-design.md`](docs/sf-daily-diff-design.md) | Salesforce日次差分・活動量可視化の設計メモ（既存パイプラインの調査結果つき） |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
 
 ## 使い方
@@ -44,7 +45,9 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 
 1. **GASソースの Git 取り込み** — 現状バックアップ皆無で、消えたら復旧不能。
    Drive API では取得できずリモートから実行できないため、
-   [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) をローカルで実行する（10〜15分）
+   [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) をローカルで実行する（10〜15分）。
+   **SFレポートメールを毎日取り込んでいるGASの実体が特定できていない**という実害が既に出ている
+   → [`docs/sf-daily-diff-design.md`](docs/sf-daily-diff-design.md)
 2. **SFレポートID 2027-01〜04 の追加** — `alert-overdue-mse` が持つ月別表は2026-12までしかない。
    2026年内に埋めないと年明けに期日超過アラートが動かない
 3. **`mse-weekly-kpi-recovery` に業績レポートのIDを持たせる** — 唯一残ったID欠落
@@ -53,3 +56,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 6. **【井上】個人チェックシート2026 の鮮度確認** — 突合の入力として妥当か
 7. **用途不明GAS3件の判断** — 「無題のプロジェクト」。命名するか削除するか
 8. **calendar-add-v2 / makeshop-design-guidelines の廃止判断** — 後継と併存している
+9. **SFレポートへの列追加** — 「GAS朝礼用MSE　全案件2026年受注」に 商談ID(18桁) /
+   商談商品ID / 最終活動日 を追加する。現状 lineId に金額が含まれるため金額変更で
+   差分追跡が切れ、最終活動日がないため活動量を測れない
+   → [`docs/sf-daily-diff-design.md`](docs/sf-daily-diff-design.md)
