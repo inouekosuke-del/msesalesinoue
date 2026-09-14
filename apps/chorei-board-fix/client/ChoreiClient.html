@@ -124,6 +124,7 @@
     if (!o) return false;
     if (String(o.active).toUpperCase() === 'FALSE') return false;
     if (o.doneAt) return false;          // ← これが無いと完了しても消えない
+    if (o.deletedAt) return false;       // ← 同じく、削除しても消えない
     return true;
   };
 
@@ -191,6 +192,21 @@
         alert('完了にできませんでした: ' + (e && e.message ? e.message : e));
       })
       .指示を完了にする(id);
+  };
+
+  /** 削除ボタンから呼ぶ。完了と同じく、書き込みが終わってから再描画する。 */
+  window.指示を削除 = function (id, 再描画) {
+    if (!window.confirm('この指示を削除しますか。')) return;
+    var 行 = document.querySelector('[data-order-id="' + id + '"]');
+    if (行) 行.style.opacity = '0.4';
+
+    google.script.run
+      .withSuccessHandler(function () { if (再描画) 再描画(); })
+      .withFailureHandler(function (e) {
+        if (行) 行.style.opacity = '';
+        alert('削除できませんでした: ' + (e && e.message ? e.message : e));
+      })
+      .指示を削除する(id);
   };
 })();
 </script>

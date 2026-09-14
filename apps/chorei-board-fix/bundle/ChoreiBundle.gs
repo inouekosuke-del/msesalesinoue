@@ -1150,7 +1150,9 @@ var ORDER_NEW_COLS = [
   'targetKind',  // 'deal' | 'segment' | 'list' | 'free'
   'targetRef',   // deal なら lineId、それ以外はラベル。例 '代理店リスト'
   'count',       // 何件やるか
-  'doneCount'    // 消化件数。担当が更新する
+  'doneCount',   // 消化件数。担当が更新する
+  'deletedAt',   // 削除した日時。行は消さず、ここに入れて active を落とす
+  'deletedBy'    // 削除した人
 ];
 
 
@@ -1404,6 +1406,7 @@ function 指示の消化状況(memberId) {
   orders.rows.forEach(function (r) {
     if (String(r.active).toUpperCase() !== 'TRUE') return;
     if (String(r.doneAt || '')) return;                       // 完了済みは出さない
+    if (String(r.deletedAt || '')) return;                    // 削除済みも出さない
     // all / team / one を宛先の配列に展開してから絞る
     if (memberId && 指示の宛先(r, members).indexOf(memberId) < 0) return;
 
@@ -1480,6 +1483,48 @@ function 指示を完了にする(id, byName) {
 }
 
 
+/**
+ * 指示を削除する。
+ *
+ * **行は消さない。** `deletedAt` を入れて `active` を落とす。
+ * 行ごと消すと、その指示に紐づく `指示回答` が宙に浮き、あとから
+ * 「何を指示したのか」が追えなくなる。一覧からは消えるので見た目は同じ。
+ *
+ * 間違って消したら `active` を TRUE に戻し、`deletedAt` を空にすれば戻る。
+ *
+ * @param {string} id 指示のid
+ * @param {string=} byName 削除した人の表示名。省略時はログインユーザー
+ */
+function 指示を削除する(id, byName) {
+  var ss = SpreadsheetApp.openById(DATA_SS_ID);
+  var orders = readTable_(ss, ['id', 'scope', 'targetId', 'text', 'due', 'active']);
+  if (!orders) throw new Error('指示シートが見つかりません');
+
+  var at = -1;
+  orders.rows.forEach(function (r, i) { if (String(r.id) === String(id)) at = i; });
+  if (at < 0) throw new Error('指示 "' + id + '" が見つかりません');
+
+  var row = orders.firstDataRow + at;
+  var set = {
+    deletedAt: Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm:ss'),
+    deletedBy: byName || Session.getActiveUser().getEmail(),
+    active: 'FALSE'        // ← これが無いと一覧から消えない
+  };
+  var 書けた = 0;
+  Object.keys(set).forEach(function (col) {
+    var c = orders.header.indexOf(col);
+    if (c >= 0) { orders.sheet.getRange(row, c + 1).setValue(set[col]); 書けた++; }
+  });
+  if (書けた < 3) {
+    Logger.log('[注意] deletedAt / deletedBy 列がありません。指示_列を追加_実行() を走らせると記録が残ります。' +
+               'active は落としたので一覧からは消えます。');
+  }
+  SpreadsheetApp.flush();
+  Logger.log('削除しました: ' + id + ' / ' + String(orders.rows[at].text).slice(0, 40));
+  return { id: id, row: row };
+}
+
+
 /** 完了済みなのに active=TRUE のまま残っている指示を片付ける（ドライラン）。 */
 function 指示_完了済みを片付ける_ドライラン() { return tidyDoneOrders_(false); }
 
@@ -1500,13 +1545,17 @@ function tidyDoneOrders_(apply) {
 
   var targets = [];
   orders.rows.forEach(function (r, i) {
-    if (!String(r.doneAt || '')) return;
+    // 完了済み・削除済みのどちらでも、active が立ったままなら一覧に出てしまう
+    if (!String(r.doneAt || '') && !String(r.deletedAt || '')) return;
     if (String(r.active).toUpperCase() !== 'TRUE') return;
-    targets.push({ row: orders.firstDataRow + i, id: String(r.id), text: String(r.text) });
+    targets.push({
+      row: orders.firstDataRow + i, id: String(r.id), text: String(r.text),
+      なぜ: String(r.deletedAt || '') ? '削除済み' : '完了済み'
+    });
   });
 
-  Logger.log((apply ? '' : '【ドライラン】') + '完了済みなのに active=TRUE の指示: ' + targets.length + '件');
-  targets.forEach(function (t) { Logger.log('  ' + t.id + ' : ' + t.text.slice(0, 44)); });
+  Logger.log((apply ? '' : '【ドライラン】') + '処理済みなのに active=TRUE の指示: ' + targets.length + '件');
+  targets.forEach(function (t) { Logger.log('  [' + t.なぜ + '] ' + t.id + ' : ' + t.text.slice(0, 40)); });
 
   if (apply && targets.length) {
     バックアップを作る_('指示の片付け前');
