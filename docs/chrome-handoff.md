@@ -1,0 +1,122 @@
+# Claude in Chrome に渡す指示文
+
+このリポジトリでの調査・実装は済んでいる。残るのは
+「Apps Script にファイルを貼って関数を実行する」だけで、それには
+ログイン済みのブラウザが要る。以下をそのまま Claude in Chrome に貼る。
+
+調査の全容 → [`chorei-board-audit-2026-09-13.md`](chorei-board-audit-2026-09-13.md)
+手順の詳細 → [`../apps/chorei-board-fix/README.md`](../apps/chorei-board-fix/README.md)
+
+---
+
+MSE朝礼ボードの不具合修正を反映してほしい。コードは書けていて、
+GitHubに置いてある。あなたにやってほしいのは貼り付けと実行だけ。
+
+## 対象
+
+- スプレッドシート: https://docs.google.com/spreadsheets/d/18FYRRykL5krlrZe3Sq4hJtl7ZIAUsoX4AxS9RX6QyOU/edit
+- 貼るコード1: https://github.com/inouekosuke-del/msesalesinoue/blob/claude/tender-ramanujan-4mmpq0/apps/chorei-board-fix/bundle/ChoreiBundle.gs
+- 貼るコード2: https://github.com/inouekosuke-del/msesalesinoue/blob/claude/tender-ramanujan-4mmpq0/apps/chorei-board-fix/client/ChoreiClient.html
+
+GitHubのページにある「Copy raw file」ボタンで全文をコピーできる。
+
+## 守ること
+
+- **既存のファイルは1文字も書き換えない。** すべて新規ファイルとして追加する
+- 各ステップの実行ログを必ず読み、結果を報告してから次に進む
+- 想定と違う数字が出たら止めて報告する。勝手に進めない
+- 関数名を推測しない。ステップ5は実際のログを読んで判断する
+
+## 手順
+
+### 1. ChoreiBundle.gs を貼る
+
+スプレッドシートを開く → 拡張機能 > Apps Script → 左の「ファイル」の ＋ →
+スクリプト → 名前を `ChoreiBundle` にして、コピーした中身を全部貼って保存。
+
+### 2. セットアップ_確認() を実行
+
+上部の関数選択から `セットアップ_確認` を選んで実行。
+初回はGoogleの承認画面が出るので承認する。読み取りだけで何も書き換えない。
+
+実行ログに9項目出る。次の数字が出れば想定どおり:
+
+| 項目 | 件数 |
+|---|---:|
+| 日付セルになっている月キー | 9,440 |
+| 日次履歴の memberId 空 | 213 |
+| 完了済みなのに active=TRUE の指示 | 10 |
+| 閲覧のみとして外す人 | 2（田村・竹本） |
+| 指示シートに足す列 | 5 |
+
+**この時点のログを全部見せてほしい。**
+
+### 3. メンバーシートに2人足す
+
+ステップ2のログの「メンバーに足りない人」に、貼れる形の行が出ている。
+それを スプレッドシートの `メンバー` シートの一番下に貼る。
+`email` 列だけ空なので、次を手で入れる:
+
+- 吉牟田: `yoshimuta@makeshop.co.jp`
+- 小菅: `kosuge@makeshop.co.jp`
+
+※ 実際のアドレスが違っていたら井上さんに確認すること。
+
+### 4. セットアップ_実行()
+
+先にスプレッドシートのコピーが1つ作られ、そのあと4つの修復が当たる。
+
+ログの最後に `やり残しの書き換え: 0` が出れば成功。
+`_診断レポート` と `_集計検算` のシートができる。
+ログ先頭の「バックアップ:」のURLを控えて報告すること。
+
+### 5. トリガー診断()
+
+実行すると関数ごとのトリガー本数が出る。
+**時刻トリガーが2本ある関数**が取り込み処理（朝と夕）。その名前を報告する。
+
+例:
+```
+関数ごとの本数:
+  ingestMail: 2本  ← 朝と夕の2本はこれ
+  postDigestPm: 1本
+```
+
+### 6. トリガーを張り替える
+
+引数が要るので、エディタに次の関数を追加して実行する。
+`"ingestMail"` はステップ5で分かった実際の名前に置き換える。
+
+```javascript
+function これを実行(){
+  取り込みトリガーを組み直す_実行("ingestMail");
+}
+```
+
+朝 7:30 と夕 18:30 の2本になれば成功。
+これで「同じレポートを1日2回取り込んで数字が倍になる」のが止まる。
+
+### 7. ChoreiClient.html を貼る
+
+Apps Script で ＋ > HTML → 名前を `ChoreiClient` にして、
+コピーした中身を貼って保存。
+
+次に、画面のHTMLファイル（`Index.html` など、`<body>` があるファイル）を開き、
+`</body>` の直前に次の1行を足す:
+
+```
+<?!= HtmlService.createHtmlOutputFromFile('ChoreiClient').getContent(); ?>
+```
+
+**このファイルはこの1行以外いじらない。**
+
+### 8. 報告
+
+ここまでで止めてよい。次を報告してほしい:
+
+- 各ステップのログ（特に2と4）
+- バックアップのURL
+- ステップ5で分かった関数名
+- 途中で出たエラー
+
+残りの作業（画面のコード3箇所の差し替え）は別途やる。
