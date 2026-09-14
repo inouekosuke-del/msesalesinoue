@@ -18,6 +18,7 @@ function セットアップ_確認() {
     ['閲覧のみの人を外す', メンバー_閲覧のみを外す_ドライラン],
     ['指示シートの列追加', 指示_列を追加_ドライラン],
     ['完了済み指示の片付け', 指示_完了済みを片付ける_ドライラン],
+    ['Slack通知の宛先', メンバー_報告先を追加_ドライラン],
     ['権限の一覧', アクセス診断],
     ['トリガー', トリガー診断]
   ];
@@ -51,7 +52,8 @@ function セットアップ_実行() {
       ['月キーと名寄せ', function () { applyRepairPlan_(buildRepairPlan_()); }],
       ['閲覧のみの人を外す', function () { demoteViewers_(true); }],
       ['指示シートの列追加', function () { addOrderCols_(true); }],
-      ['完了済み指示の片付け', function () { tidyDoneOrders_(true); }]
+      ['完了済み指示の片付け', function () { tidyDoneOrders_(true); }],
+      ['Slack通知の宛先', function () { addReportTo_(true); }]
     ];
     steps.forEach(function (s, i) {
       Logger.log('\n===== ' + (i + 1) + '. ' + s[0] + ' =====');

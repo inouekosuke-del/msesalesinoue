@@ -13,6 +13,7 @@ ORDER = [
     ('ChoreiAuth.gs',  '権限'),
     ('ChoreiOrder.gs', '指示'),
     ('ChoreiTrigger.gs','取り込みトリガーの張り替え'),
+    ('ChoreiNotify.gs', 'Slack通知のメンション'),
 ]
 HERE = os.path.dirname(os.path.abspath(__file__))
 
