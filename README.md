@@ -27,6 +27,7 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
+| [`docs/incident-2026-09-15-chorei-post.md`](docs/incident-2026-09-15-chorei-post.md) | 障害記録：朝礼がSlackに流れない（AM系のみ停止、調査中） |
 
 ## 使い方
 

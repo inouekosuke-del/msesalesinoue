@@ -88,6 +88,10 @@ apps:
     name: MSE朝礼ボード
     type: spreadsheet_app
     data_sources: [chorei_board_data]
-    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース
-    status: active
+    related_folder: 1hVnWNMttCtTdvkplcconwtcENYcgI-MS  # MSE朝礼ボード_ソース（空。取り込み未了）
+    slack_channel: C0BTCHCN8B1  # #group-セールス朝礼終礼（2026-09-10に group-mse朝礼終礼 から改名）
+    status: degraded     # 2026-09-12頃からAM（朝礼）投稿のみ停止。終礼・取込・指示投稿は正常
     source_backed_up: false
+    notes: |
+      設定シートの slackChannel が 'group-mse-朝礼' のまま腐っている（該当名のチャンネルは存在しない）。
+      障害の切り分けは docs/incident-2026-09-15-chorei-post.md。原因確定にはGASソースが必要。
