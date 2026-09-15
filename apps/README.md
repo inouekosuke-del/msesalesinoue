@@ -1,6 +1,16 @@
-# apps/
+# apps/ — GASソースの置き場
 
-GASプロジェクトのソース置き場。現時点では空。
+## 入っているもの
 
-取り込み手順は [`../docs/gas-backup-runbook.md`](../docs/gas-backup-runbook.md) を参照。
-clasp と Google の対話ログインが必要なため、ローカルPCでの実行が前提。
+| パス | 内容 | 状態 |
+|---|---|---|
+| [`chorei-board/SummaryFast.gs`](chorei-board/SummaryFast.gs) | 朝礼ボード「まとめ」ビュー高速化モジュール（既存コードに非依存の追加ファイル） | 実データのスタブで検証済み。実機未適用 |
+
+## まだ入っていないもの
+
+既存GAS 9件のソースは**ひとつもGit管理下に無い**。
+Drive API はApps Scriptのソースを返さないため、リモートからは取得できない。
+[`../docs/gas-backup-runbook.md`](../docs/gas-backup-runbook.md) をローカルで実行して取り込む。
+
+取り込みが済むまで、GAS側の不具合は「症状の切り分けまでは出来るが、原因確定と修正は出来ない」
+状態が続く（2026-09-15 時点で朝礼の投稿停止・まとめビューの遅さの2件がこれで止まっている）。

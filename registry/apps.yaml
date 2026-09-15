@@ -95,3 +95,4 @@ apps:
     notes: |
       設定シートの slackChannel が 'group-mse-朝礼' のまま腐っている（該当名のチャンネルは存在しない）。
       障害の切り分けは docs/incident-2026-09-15-chorei-post.md。原因確定にはGASソースが必要。
+      まとめビューの遅さには apps/chorei-board/SummaryFast.gs（追加モジュール）を用意済み。未適用。
