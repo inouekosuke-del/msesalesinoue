@@ -25,6 +25,8 @@ MSEチームのAIオフィス（Claudeスキル・GASアプリ・Googleスプレ
 | [`registry/apps.yaml`](registry/apps.yaml) | アプリ／GAS台帳（9件） |
 | [`docs/gas-backup-runbook.md`](docs/gas-backup-runbook.md) | GASソースをGit管理下に置く手順（ローカル実行） |
 | [`apps/`](apps/) | GASソースの置き場。取り込み待ち |
+| [`docs/chohyo-fileserver-sync.md`](docs/chohyo-fileserver-sync.md) | 帳票PDFをファイルサーバー（`\\gmoms-files01\...\顧客別`）へ同期する手順 |
+| [`scripts/`](scripts/) | PC側で動かす補助スクリプト（PowerShell） |
 | [`docs/naming-and-placement.md`](docs/naming-and-placement.md) | フォルダ体系・命名規則・新規作成時の手順 |
 | [`docs/audit-2026-09-10.md`](docs/audit-2026-09-10.md) | 棚卸しの生データと所見 |
 
